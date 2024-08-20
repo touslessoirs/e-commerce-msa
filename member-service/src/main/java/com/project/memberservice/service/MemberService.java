@@ -4,12 +4,9 @@ import com.project.memberservice.dto.MemberDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.repository.MemberRepository;
 import com.project.memberservice.vo.OrderResponse;
-import com.thoughtworks.xstream.mapper.Mapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
-import org.modelmapper.spi.MatchingStrategy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,7 +32,7 @@ public class MemberService {
      * @param memberDto
      * @return memberDto (memberId 포함)
      */
-    public MemberDto signup(MemberDto memberDto) {
+    public MemberDto signUp(MemberDto memberDto) {
         ModelMapper mapper = new ModelMapper();
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 
@@ -69,11 +66,11 @@ public class MemberService {
 
 
     /**
-     * 사용자 목록 조회
+     * 전체 사용자 조회
      *
-     * @return
+     * @return Member List
      */
-    public Iterable<Member> getMemberByAll(){
+    public Iterable<Member> getAllMembers(){
         return memberRepository.findAll();
     }
 

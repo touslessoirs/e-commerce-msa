@@ -41,6 +41,7 @@ application.yml
 
 ### config ###
 SecurityConfig.java
+WebSecurityConfig.java
 
 ### gradle ###
 build.gradle

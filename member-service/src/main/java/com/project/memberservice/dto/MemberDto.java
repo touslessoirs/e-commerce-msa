@@ -14,6 +14,7 @@ public class MemberDto {
     private String phone;
     private String address;
     private String addressDetail;
+    private Enum role;
 
     private List<OrderResponse> orders;
 }

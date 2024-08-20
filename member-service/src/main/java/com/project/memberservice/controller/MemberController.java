@@ -8,7 +8,6 @@ import com.project.memberservice.vo.MemberRequest;
 import com.project.memberservice.vo.MemberResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
@@ -19,9 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -39,39 +36,33 @@ public class MemberController {
     @Autowired
     private Greeting greeting;
 
-    @GetMapping("/port_check")
+    @GetMapping("/port-check")
     public String status() {
-        return String.format("User Service Running on PORT %s", env.getProperty("server.port"));
+        return String.format("Member Service Running on PORT %s", env.getProperty("server.port"));
     }
 
-    //    @Operation(summary = "환영 메시지 출력 API", description = "Welcome message를 출력하기 위한 API")
     @GetMapping("/welcome")
-//    @Timed(value="members.welcome", longTask = true)
     public String welcome(HttpServletRequest request, HttpServletResponse response) {
-//        System.out.println("users.welcome ip:" + request.getRemoteAddr() +
-//                "," + request.getRemoteHost() +
-//                "," + request.getRequestURI() +
-//                "," + request.getRequestURL());
         return greeting.getMessage();
     }
 
     /* 회원 가입 */
     @PostMapping("/members")
-    public ResponseEntity<MemberResponse> signup(@RequestBody MemberRequest memberRequest) {
+    public ResponseEntity<MemberResponse> signUp(@RequestBody MemberRequest memberRequest) {
         ModelMapper mapper = new ModelMapper();
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 
         MemberDto memberDto = mapper.map(memberRequest, MemberDto.class);
-        MemberDto savedMemberDto = memberService.signup(memberDto);
+        MemberDto savedMemberDto = memberService.signUp(memberDto);
         MemberResponse memberResponse = mapper.map(savedMemberDto, MemberResponse.class);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponse);
     }
 
-    /* 사용자 목록 조회 */
+    /* 전체 사용자 조회 */
     @GetMapping("/members")
-    public ResponseEntity<List<MemberResponse>> getMembers() {
-        Iterable<Member> memberList = memberService.getMemberByAll();
+    public ResponseEntity<List<MemberResponse>> getAllMembers() {
+        Iterable<Member> memberList = memberService.getAllMembers();
 
         List<MemberResponse> result = new ArrayList<>();
         memberList.forEach(v -> {
