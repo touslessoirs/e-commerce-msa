@@ -1,6 +1,9 @@
 package com.project.memberservice.dto;
 
+import com.project.memberservice.vo.OrderResponse;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class MemberDto {
@@ -11,4 +14,6 @@ public class MemberDto {
     private String phone;
     private String address;
     private String addressDetail;
+
+    private List<OrderResponse> orders;
 }

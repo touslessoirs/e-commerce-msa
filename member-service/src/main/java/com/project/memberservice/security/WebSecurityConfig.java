@@ -23,7 +23,7 @@ public class WebSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/members/**").permitAll()
+                                .requestMatchers("/member-service/**").permitAll()
                                 .anyRequest().authenticated()
                 );
 

@@ -18,12 +18,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/")
+@RequestMapping("/member-service")
 public class MemberController {
 
     private final Environment env;
@@ -37,9 +39,9 @@ public class MemberController {
     @Autowired
     private Greeting greeting;
 
-    @GetMapping("/health_check")
+    @GetMapping("/port_check")
     public String status() {
-        return "It's working in User Service";
+        return String.format("User Service Running on PORT %s", env.getProperty("server.port"));
     }
 
     //    @Operation(summary = "환영 메시지 출력 API", description = "Welcome message를 출력하기 위한 API")
@@ -53,6 +55,7 @@ public class MemberController {
         return greeting.getMessage();
     }
 
+    /* 회원 가입 */
     @PostMapping("/members")
     public ResponseEntity<MemberResponse> signup(@RequestBody MemberRequest memberRequest) {
         ModelMapper mapper = new ModelMapper();
@@ -65,4 +68,45 @@ public class MemberController {
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponse);
     }
 
+    /* 사용자 목록 조회 */
+    @GetMapping("/members")
+    public ResponseEntity<List<MemberResponse>> getMembers() {
+        Iterable<Member> memberList = memberService.getMemberByAll();
+
+        List<MemberResponse> result = new ArrayList<>();
+        memberList.forEach(v -> {
+            result.add(new ModelMapper().map(v, MemberResponse.class));
+        });
+
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    /* 사용자 정보 & 주문 내역 조회 */
+    @GetMapping("/members/{memberId}")
+    public ResponseEntity<MemberResponse> getUser(@PathVariable("memberId") Long memberId) {
+        MemberDto memberDto = memberService.getMemberByMemberId(memberId);
+
+        MemberResponse memberResponse = new ModelMapper().map(memberDto, MemberResponse.class);
+
+        return ResponseEntity.status(HttpStatus.OK).body(memberResponse);
+
+
+//        MemberDto memberDto = memberService.getMemberByMemberId(memberId);
+//
+//        if (memberDto == null) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+//        }
+//
+//        MemberResponse returnValue = new ModelMapper().map(memberDto, MemberResponse.class);
+//
+//        EntityModel entityModel = EntityModel.of(returnValue);
+//        WebMvcLinkBuilder linkTo = linkTo(methodOn(this.getClass()).getUsers());
+//        entityModel.add(linkTo.withRel("all-users"));
+//
+//        try {
+//            return ResponseEntity.status(HttpStatus.OK).body(entityModel);
+//        } catch (Exception ex) {
+//            throw new RuntimeException();
+//        }
+    }
 }
