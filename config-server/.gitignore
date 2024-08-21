@@ -35,15 +35,3 @@ out/
 
 ### VS Code ###
 .vscode/
-
-### yml ###
-application.yml
-bootstrap.yml
-
-### config ###
-SecurityConfig.java
-WebSecurityConfig.java
-
-### gradle ###
-build.gradle
-settings.gradle

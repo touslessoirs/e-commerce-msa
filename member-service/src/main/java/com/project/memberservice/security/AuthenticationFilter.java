@@ -96,6 +96,12 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
                 .signWith(secretKey)
                 .compact();
 
+        //응답 메시지 설정
+        res.setStatus(HttpServletResponse.SC_OK);
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
+        res.getWriter().write("{\"message\": \"Login successful\"}");
+
         res.addHeader("Authorization", token);
         res.addHeader("memberId", memberId);
     }
