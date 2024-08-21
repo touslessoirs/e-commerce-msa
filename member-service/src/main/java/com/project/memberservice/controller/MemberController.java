@@ -22,7 +22,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/member-service")
+@RequestMapping("/")
 public class MemberController {
 
     private final Environment env;
