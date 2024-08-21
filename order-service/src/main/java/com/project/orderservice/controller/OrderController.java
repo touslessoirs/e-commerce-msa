@@ -36,9 +36,9 @@ public class OrderController {
     @Autowired
     private Greeting greeting;
 
-    @GetMapping("/port-check")
+    @GetMapping("/health-check")
     public String status() {
-        return String.format("Order Service Running on PORT %s", env.getProperty("server.port"));
+        return String.format("ORDER SERVICE Running on PORT %s", env.getProperty("server.port"));
     }
 
     @GetMapping("/welcome")

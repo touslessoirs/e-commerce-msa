@@ -34,9 +34,10 @@ public class ProductController {
     @Autowired
     private Greeting greeting;
 
-    @GetMapping("/port-check")
+    @GetMapping("/health-check")
     public String status() {
-        return String.format("Product Service Running on PORT %s", env.getProperty("server.port"));
+        return String.format("PRODUCT SERVICE Running on PORT %s", env.getProperty("server.port"));
+
     }
 
     @GetMapping("/welcome")

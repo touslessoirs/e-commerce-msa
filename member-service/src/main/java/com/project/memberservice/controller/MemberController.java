@@ -36,9 +36,11 @@ public class MemberController {
     @Autowired
     private Greeting greeting;
 
-    @GetMapping("/port-check")
+    @GetMapping("/health-check")
     public String status() {
-        return String.format("Member Service Running on PORT %s", env.getProperty("server.port"));
+        return String.format("MEMBER SERVICE Running on PORT "
+                + env.getProperty("server.port")
+                + ", token expiration time=" + env.getProperty("jwt.token.expiration_time"));
     }
 
     @GetMapping("/welcome")
