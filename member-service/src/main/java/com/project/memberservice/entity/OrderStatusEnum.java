@@ -1,4 +1,4 @@
-package com.project.orderservice.entity;
+package com.project.memberservice.entity;
 
 public enum OrderStatusEnum {
     PAYMENT_COMPLETED("결제 완료"),

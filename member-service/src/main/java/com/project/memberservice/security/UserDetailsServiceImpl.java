@@ -34,7 +34,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     /**
-     * username(email)에 해당하는 MemberDto 조회 -> memberId 조회에 사용
+     * username(email)에 해당하는 MemberDto 조회 (-> memberId 조회)
      *
      * @param username
      * @return MemberDto

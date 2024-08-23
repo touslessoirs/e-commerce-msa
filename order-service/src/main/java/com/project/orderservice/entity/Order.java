@@ -1,14 +1,20 @@
 package com.project.orderservice.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
+@Builder
 @Data
 @Entity
 @Table(name = "orders")
-public class Order implements Serializable {
+@NoArgsConstructor
+@AllArgsConstructor
+public class Order extends Timestamped implements Serializable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -20,6 +26,7 @@ public class Order implements Serializable {
     @Column(name = "total_quantity", nullable = false)
     private int totalQuantity;
 
+    @Builder.Default
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private OrderStatusEnum status = OrderStatusEnum.PAYMENT_COMPLETED;
