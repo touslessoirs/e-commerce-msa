@@ -1,11 +1,11 @@
-package com.project.memberservice.vo;
+package com.project.memberservice.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class MemberRequest {
+public class MemberRequestDto {
     @Email
     @NotNull(message = "email 입력은 필수입니다.")
     private String email;

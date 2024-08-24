@@ -1,15 +1,13 @@
 package com.project.productservice.controller;
 
-import com.project.productservice.entity.Product;
+import com.project.productservice.dto.ProductResponseDto;
+import com.project.productservice.exception.ProductNotFoundException;
 import com.project.productservice.service.ProductService;
-import com.project.productservice.vo.Greeting;
-import com.project.productservice.vo.ProductResponse;
-import jakarta.persistence.criteria.Order;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +18,11 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/product-service")
+@RequestMapping("/")
 public class ProductController {
 
+    @Value("${greeting.message}")
+    private String greeting;
     private final Environment env;
     private final ProductService productService;
 
@@ -30,9 +30,6 @@ public class ProductController {
         this.env = env;
         this.productService = memberService;
     }
-
-    @Autowired
-    private Greeting greeting;
 
     @GetMapping("/health-check")
     public String status() {
@@ -42,34 +39,39 @@ public class ProductController {
 
     @GetMapping("/welcome")
     public String welcome(HttpServletRequest request, HttpServletResponse response) {
-        return greeting.getMessage();
+        return greeting;
     }
 
     /* 전체 상품 조회 */
     @GetMapping("/products")
-    public ResponseEntity<List<ProductResponse>> getAllProducts() {
-        Iterable<Product> productList = productService.getAllProducts();
+    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
+        Iterable<ProductResponseDto> productList = productService.getAllProducts();
 
-        List<ProductResponse> result = new ArrayList<>();
+        List<ProductResponseDto> result = new ArrayList<>();
         productList.forEach(v -> {
-            result.add(new ModelMapper().map(v, ProductResponse.class));
+            result.add(new ModelMapper().map(v, ProductResponseDto.class));
         });
 
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    /* 사용자별 상품 주문 */
-    @PostMapping("/{memberId}/orders")
-    public ResponseEntity<ProductResponse> addOrder(@PathVariable("memberId") String memberId, @RequestBody Order order) {
+    /* 상품 상세 조회 */
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable Long productId) throws ProductNotFoundException {
+        log.info("getProductDetail 호출");
+        ProductResponseDto productResponseDto = productService.getProductDetail(productId);
 
-        return null;
+        if (productResponseDto != null) {
+            return ResponseEntity.ok(productResponseDto);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
     }
 
-
-    /* 사용자별 주문 내역 조회 */
-    @GetMapping("/{memberId}/orders")
-    public ResponseEntity<Order> getOrder(@PathVariable("memberId") String memberId) {
-
-        return null;
+    /* 재고 update (for feign client) */
+    @PutMapping("/{productId}")
+    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("orderQuantity") int orderQuantity) throws ProductNotFoundException {
+        log.info("updateStock 호출");
+        productService.updateStock(productId, orderQuantity);
     }
 }

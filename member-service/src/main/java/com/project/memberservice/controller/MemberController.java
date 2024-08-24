@@ -1,17 +1,15 @@
 package com.project.memberservice.controller;
 
-import com.project.memberservice.dto.MemberDto;
+import com.project.memberservice.dto.MemberRequestDto;
+import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.service.MemberService;
-import com.project.memberservice.vo.Greeting;
-import com.project.memberservice.vo.MemberRequest;
-import com.project.memberservice.vo.MemberResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +23,8 @@ import java.util.List;
 @RequestMapping("/")
 public class MemberController {
 
+    @Value("${greeting.message}")
+    private String greeting;
     private final Environment env;
     private final MemberService memberService;
 
@@ -32,9 +32,6 @@ public class MemberController {
         this.env = env;
         this.memberService = memberService;
     }
-
-    @Autowired
-    private Greeting greeting;
 
     @GetMapping("/health-check")
     public String status() {
@@ -45,30 +42,30 @@ public class MemberController {
 
     @GetMapping("/welcome")
     public String welcome(HttpServletRequest request, HttpServletResponse response) {
-        return greeting.getMessage();
+        return greeting;
     }
 
     /* 회원 가입 */
     @PostMapping("/members")
-    public ResponseEntity<MemberResponse> signUp(@RequestBody MemberRequest memberRequest) {
+    public ResponseEntity<MemberResponseDto> signUp(@RequestBody MemberRequestDto memberRequestDto) {
         ModelMapper mapper = new ModelMapper();
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 
-        MemberDto memberDto = mapper.map(memberRequest, MemberDto.class);
-        MemberDto savedMemberDto = memberService.signUp(memberDto);
-        MemberResponse memberResponse = mapper.map(savedMemberDto, MemberResponse.class);
+//        MemberDto memberDto = mapper.map(memberRequestDto, MemberDto.class);
+        MemberResponseDto memberResponseDto = memberService.signUp(memberRequestDto);
+//        MemberResponseDto memberResponseDto = mapper.map(savedMemberDto, MemberResponseDto.class);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(memberResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(memberResponseDto);
     }
 
     /* 전체 사용자 조회 */
     @GetMapping("/members")
-    public ResponseEntity<List<MemberResponse>> getAllMembers() {
+    public ResponseEntity<List<MemberResponseDto>> getAllMembers() {
         Iterable<Member> memberList = memberService.getAllMembers();
 
-        List<MemberResponse> result = new ArrayList<>();
+        List<MemberResponseDto> result = new ArrayList<>();
         memberList.forEach(v -> {
-            result.add(new ModelMapper().map(v, MemberResponse.class));
+            result.add(new ModelMapper().map(v, MemberResponseDto.class));
         });
 
         return ResponseEntity.status(HttpStatus.OK).body(result);
@@ -76,30 +73,9 @@ public class MemberController {
 
     /* 사용자 정보 & 주문 내역 조회 */
     @GetMapping("/members/{memberId}")
-    public ResponseEntity<MemberResponse> getUser(@PathVariable("memberId") Long memberId) {
-        MemberDto memberDto = memberService.getMemberByMemberId(memberId);
+    public ResponseEntity<MemberResponseDto> getUser(@PathVariable("memberId") Long memberId) {
+        MemberResponseDto memberResponseDto = memberService.getMemberByMemberId(memberId);
 
-        MemberResponse memberResponse = new ModelMapper().map(memberDto, MemberResponse.class);
-
-        return ResponseEntity.status(HttpStatus.OK).body(memberResponse);
-
-
-//        MemberDto memberDto = memberService.getMemberByMemberId(memberId);
-//
-//        if (memberDto == null) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-//        }
-//
-//        MemberResponse returnValue = new ModelMapper().map(memberDto, MemberResponse.class);
-//
-//        EntityModel entityModel = EntityModel.of(returnValue);
-//        WebMvcLinkBuilder linkTo = linkTo(methodOn(this.getClass()).getUsers());
-//        entityModel.add(linkTo.withRel("all-users"));
-//
-//        try {
-//            return ResponseEntity.status(HttpStatus.OK).body(entityModel);
-//        } catch (Exception ex) {
-//            throw new RuntimeException();
-//        }
+        return ResponseEntity.status(HttpStatus.OK).body(memberResponseDto);
     }
 }

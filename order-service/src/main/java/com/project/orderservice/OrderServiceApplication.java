@@ -1,5 +1,6 @@
 package com.project.orderservice;
 
+import com.project.orderservice.exception.FeignErrorDecoder;
 import feign.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -22,5 +23,10 @@ public class OrderServiceApplication {
     @Bean
     public Logger.Level feignLoggerLevel() {
         return Logger.Level.FULL;
+    }
+
+    @Bean
+    public FeignErrorDecoder feignErrorDecoder(){
+        return new FeignErrorDecoder();
     }
 }

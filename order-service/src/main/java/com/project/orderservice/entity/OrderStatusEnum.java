@@ -6,7 +6,8 @@ public enum OrderStatusEnum {
     DELIVERED("배송 완료"),
     CANCELLED("주문 취소"),
     RETURN_REQUESTED("반품 신청"),
-    RETURN_COMPLETED("반품 완료");
+    RETURN_COMPLETED("반품 완료"),
+    ORDER_CONFIRMED("주문 확정");
 
     private final String description;
 

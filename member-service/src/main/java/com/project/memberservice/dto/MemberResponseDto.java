@@ -1,20 +1,19 @@
 package com.project.memberservice.dto;
 
-import com.project.memberservice.vo.OrderResponse;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-public class MemberDto {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class MemberResponseDto {
     private Long memberId;
     private String email;
     private String name;
-    private String password;
-    private String phone;
     private String address;
     private String addressDetail;
-    private Enum role;
+    private String phone;
 
-    private List<OrderResponse> orders;
+    private List<OrderResponseDto> orders;
 }

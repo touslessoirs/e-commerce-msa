@@ -1,9 +1,9 @@
 package com.project.memberservice.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.memberservice.dto.MemberDto;
 import com.project.memberservice.entity.UserRoleEnum;
-import com.project.memberservice.vo.LoginRequest;
+import com.project.memberservice.dto.LoginRequestDto;
+import com.project.memberservice.dto.UserInfoDto;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
@@ -59,7 +59,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
             throws AuthenticationException {
 
         try {
-            LoginRequest creds = new ObjectMapper().readValue(req.getInputStream(), LoginRequest.class);
+            LoginRequestDto creds = new ObjectMapper().readValue(req.getInputStream(), LoginRequestDto.class);
 
             return getAuthenticationManager().authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -79,9 +79,9 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
         String username = ((UserDetailsImpl)auth.getPrincipal()).getMember().getEmail();
         //username에 해당하는 memberId, role 조회
-        MemberDto userDetailsDto = userDetailsService.getMemberDetailsByEmail(username);
-        String memberId = String.valueOf(userDetailsDto.getMemberId());
-        UserRoleEnum role = (UserRoleEnum) userDetailsDto.getRole();
+        UserInfoDto userInfo = userDetailsService.getMemberDetailsByEmail(username);
+        String memberId = String.valueOf(userInfo.getMemberId());
+        UserRoleEnum role = userInfo.getRole();
 
         byte[] secretKeyBytes = Base64.getEncoder().encode(environment.getProperty("jwt.token.secret_key").getBytes());
         SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);

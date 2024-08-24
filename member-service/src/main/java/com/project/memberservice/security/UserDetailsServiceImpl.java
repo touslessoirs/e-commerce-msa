@@ -1,8 +1,8 @@
 package com.project.memberservice.security;
 
-import com.project.memberservice.dto.MemberDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.repository.MemberRepository;
+import com.project.memberservice.dto.UserInfoDto;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -39,13 +39,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
      * @param username
      * @return MemberDto
      */
-    public MemberDto getMemberDetailsByEmail(String username) {
+    public UserInfoDto getMemberDetailsByEmail(String username) {
         Member member = memberRepository.findByEmail(username);
         if(member == null) {
             throw new UsernameNotFoundException(username);
         }
 
-        MemberDto memberDto = new ModelMapper().map(member, MemberDto.class);
-        return memberDto;
+        UserInfoDto userInfo = new ModelMapper().map(member, UserInfoDto.class);
+        return userInfo;
     }
 }

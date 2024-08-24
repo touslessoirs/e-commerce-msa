@@ -14,14 +14,14 @@ import java.io.Serializable;
 @Table(name = "orders")
 @NoArgsConstructor
 @AllArgsConstructor
-public class Order extends Timestamped implements Serializable{
+public class Order extends Timestamped implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long orderId;
 
     @Column(name = "total_price", nullable = false)
-    private String totalPrice;
+    private int totalPrice;
 
     @Column(name = "total_quantity", nullable = false)
     private int totalQuantity;

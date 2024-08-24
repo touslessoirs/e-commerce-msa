@@ -1,4 +1,4 @@
-package com.project.memberservice.vo;
+package com.project.memberservice.dto;
 
 import com.project.memberservice.entity.OrderStatusEnum;
 import lombok.Data;
@@ -6,10 +6,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class OrderResponse {
+public class OrderResponseDto {
     private Long orderId;
     private int totalPrice;
     private int totalQuantity;
-    private OrderStatusEnum status;     //주문 상태
-    private LocalDateTime createdAt;    //주문 생성일
+    private OrderStatusEnum status;
+    private LocalDateTime createdAt;
 }
