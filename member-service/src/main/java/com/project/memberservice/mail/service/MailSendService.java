@@ -1,10 +1,10 @@
 package com.project.memberservice.mail.service;
 
 import com.project.memberservice.entity.Member;
+import com.project.memberservice.mail.dto.MailCheckDto;
 import com.project.memberservice.mail.redis.RedisUtil;
 import com.project.memberservice.repository.MemberRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,14 +21,19 @@ import java.util.Random;
 @Service
 public class MailSendService {
 
-    @Autowired
-    private JavaMailSender mailSender;
-    private int authNumber;
     @Value("${spring.mail.username}")  //____@email.com
     private String username;
-    @Autowired
+    private int authNumber;
+
+    private JavaMailSender mailSender;
     private RedisUtil redisUtil;
     private MemberRepository memberRepository;
+
+    public MailSendService(MemberRepository memberRepository, RedisUtil redisUtil, JavaMailSender mailSender) {
+        this.memberRepository = memberRepository;
+        this.redisUtil = redisUtil;
+        this.mailSender = mailSender;
+    }
 
     /**
      * 인증번호 생성
@@ -81,29 +86,32 @@ public class MailSendService {
     }
 
     /**
-     * 인증번호 검증
-     * 입력한 인증번호에 해당하는 이메일(key)가 요청자와 일치하면 is_verified 컬럼의 값을 변경한다.
+     * 입력한 인증번호에 해당하는 이메일(key)가 요청자와 일치하면 -> is_verified 컬럼의 값을 1(true)로 변경한다.
      *
-     * @param email 수신자(요청자) 메일주소
-     * @param authNum 입력한 인증번호
+     * @param mailCheckDto
      * @return 인증번호 일치 여부
      */
-    public ResponseEntity CheckAuthNumber(String email, String authNum) {
+    public ResponseEntity checkAuthNumber(MailCheckDto mailCheckDto) throws UsernameNotFoundException {
+        String email = mailCheckDto.getEmail();
+        String authNum = mailCheckDto.getAuthNum();
+
         String authEmail = redisUtil.getData(authNum);   //인증번호가 발급된 email
+
         if(authEmail==null){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 인증번호입니다.");
         } else if (authEmail.equals(email)){  //인증번호 일치
             //사용자 정보 조회
-            Member member = memberRepository.findByEmail(email);
+            Member member = memberRepository.findByEmail(email).orElse(null);
+
             if (member != null) {
+                log.info("memberId : {}", member.getMemberId());
+                member.setIsVerified(1);  //true
+                memberRepository.save(member);
+                return ResponseEntity.ok("인증이 완료되었습니다. memberId: " + member.getMemberId());
             } else {
                 throw new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다.");
             }
 
-            //is_verified 컬럼 1(true)로 업데이트
-            member.setIsVerified(1);  //true
-            memberRepository.save(member);
-            return ResponseEntity.ok("인증이 완료되었습니다. memberId: " + member.getMemberId());
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 인증번호입니다.");
         }

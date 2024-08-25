@@ -34,6 +34,6 @@ public class MailController {
     //인증번호 검증
     @PostMapping("/auth/verify")
     public ResponseEntity AuthCheck(@Valid @RequestBody MailCheckDto mailCheckDto){
-        return mailService.CheckAuthNumber(mailCheckDto.getEmail(), mailCheckDto.getAuthNum());
+        return mailService.checkAuthNumber(mailCheckDto);
     }
 }
