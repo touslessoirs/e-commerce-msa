@@ -19,4 +19,7 @@ public class MemberRequestDto {
     private String address;
     @NotNull(message = "주소 입력은 필수입니다.")
     private String addressDetail;
+
+    private boolean admin = false;
+    private String adminToken = "";
 }

@@ -3,6 +3,7 @@ package com.project.memberservice.controller;
 import com.project.memberservice.dto.MemberRequestDto;
 import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.entity.Member;
+import com.project.memberservice.exception.InvalidAdminTokenException;
 import com.project.memberservice.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,9 +12,11 @@ import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +40,7 @@ public class MemberController {
     public String status() {
         return String.format("MEMBER SERVICE Running on PORT "
                 + env.getProperty("server.port")
-                + ", token expiration time=" + env.getProperty("jwt.token.expiration_time"));
+                + ", token expiration time=" + env.getProperty("jwt.expiration_time"));
     }
 
     @GetMapping("/welcome")
@@ -52,7 +55,12 @@ public class MemberController {
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 
 //        MemberDto memberDto = mapper.map(memberRequestDto, MemberDto.class);
-        MemberResponseDto memberResponseDto = memberService.signUp(memberRequestDto);
+        MemberResponseDto memberResponseDto = null;
+        try {
+            memberResponseDto = memberService.signUp(memberRequestDto);
+        } catch (InvalidAdminTokenException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+        }
 //        MemberResponseDto memberResponseDto = mapper.map(savedMemberDto, MemberResponseDto.class);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponseDto);
@@ -60,7 +68,10 @@ public class MemberController {
 
     /* 전체 사용자 조회 */
     @GetMapping("/members")
-    public ResponseEntity<List<MemberResponseDto>> getAllMembers() {
+    public ResponseEntity<List<MemberResponseDto>> getAllMembers(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        log.info("Authorization Header in Backend: {}", authorizationHeader);
+
         Iterable<Member> memberList = memberService.getAllMembers();
 
         List<MemberResponseDto> result = new ArrayList<>();

@@ -46,5 +46,5 @@ public class Member extends Timestamped {
 
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
-    private UserRoleEnum role = UserRoleEnum.USER;
+    private UserRoleEnum role;
 }

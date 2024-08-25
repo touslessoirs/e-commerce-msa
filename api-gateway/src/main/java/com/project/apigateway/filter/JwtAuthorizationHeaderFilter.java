@@ -1,9 +1,13 @@
 package com.project.apigateway.filter;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.core.env.Environment;
@@ -17,17 +21,26 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Base64;
 
 @Component
 @Slf4j
-public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
+public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<JwtAuthorizationHeaderFilter.Config> {
     Environment env;
 
-    public AuthorizationHeaderFilter(Environment env) {
+    @Value("${jwt.secret_key}") // Base64 Encode 한 SecretKey
+    private String secretKey;
+    private Key key;
+
+    @PostConstruct
+    public void init() {
+        byte[] secretKeyBytes = Base64.getDecoder().decode(secretKey);
+        key = Keys.hmacShaKeyFor(secretKeyBytes);
+    }
+
+    public JwtAuthorizationHeaderFilter(Environment env) {
         super(Config.class);
         this.env = env;
     }
@@ -66,19 +79,25 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
     }
 
     private boolean isJwtValid(String jwt) {
-        byte[] secretKeyBytes = Base64.getEncoder().encode(env.getProperty("jwt.token.secret_key").getBytes());
-        SecretKey signingKey = new SecretKeySpec(secretKeyBytes, SignatureAlgorithm.HS512.getJcaName());
-
         boolean returnValue = true;
         String subject = null;  //memberId
 
         try {
             JwtParser jwtParser = Jwts.parserBuilder()
-                    .setSigningKey(signingKey)
+                    .setSigningKey(key)
                     .build();
 
             subject = jwtParser.parseClaimsJws(jwt).getBody().getSubject();
+
+            log.info("subject: {}", subject);
+        } catch (SignatureException ex) {
+            log.error("유효하지 않은 JWT 서명입니다: {}", ex.getMessage());
+            returnValue = false;
+        } catch (ExpiredJwtException ex) {
+            log.error("JWT 토큰이 만료되었습니다: {}", ex.getMessage());
+            returnValue = false;
         } catch (Exception ex) {
+            log.error("JWT 토큰 파싱 중 에러 발생: {}", ex.getMessage());
             returnValue = false;
         }
 
