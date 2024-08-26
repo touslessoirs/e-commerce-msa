@@ -2,7 +2,8 @@ package com.project.productservice.service;
 
 import com.project.productservice.dto.ProductResponseDto;
 import com.project.productservice.entity.Product;
-import com.project.productservice.exception.ProductNotFoundException;
+import com.project.productservice.exception.CustomException;
+import com.project.productservice.exception.ErrorCode;
 import com.project.productservice.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -48,11 +49,9 @@ public class ProductService {
      * @param productId
      * @return ProductResponseDto
      */
-    public ProductResponseDto getProductDetail(Long productId) throws ProductNotFoundException {
-        Product product = productRepository.findById(productId).orElse(null);
-        if (product == null) {
-            throw new ProductNotFoundException();
-        }
+    public ProductResponseDto getProductDetail(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
         ProductResponseDto productResponseDto = new ModelMapper().map(product, ProductResponseDto.class);
         return productResponseDto;
     }
@@ -65,15 +64,13 @@ public class ProductService {
      * @param orderQuantity
      */
     @Transactional
-    public void updateStock(Long productId, int orderQuantity) throws ProductNotFoundException {
-        Product product = productRepository.findById(productId).orElse(null);
-        if (product == null) {
-            throw new ProductNotFoundException();
-        }
-        log.info("productId : {}, product.getStock() : {}, orderQuantity : {}", productId, product.getStock(), orderQuantity);
+    public void updateStock(Long productId, int orderQuantity) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
         if (product.getStock() < orderQuantity) {
-            throw new IllegalStateException(product.getName() + "의 재고가 부족합니다. 현재 주문 가능 수량 : " + product.getStock());
+            log.info("재고가 부족합니다.");
+            throw new CustomException(ErrorCode.OUT_OF_STOCK);
         }
+
         product.setStock(product.getStock() - orderQuantity);
         productRepository.save(product);
     }

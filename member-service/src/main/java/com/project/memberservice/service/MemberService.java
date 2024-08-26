@@ -6,8 +6,9 @@ import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.dto.OrderResponseDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.entity.UserRoleEnum;
+import com.project.memberservice.exception.CustomException;
+import com.project.memberservice.exception.ErrorCode;
 import com.project.memberservice.exception.FeignErrorDecoder;
-import com.project.memberservice.exception.InvalidAdminTokenException;
 import com.project.memberservice.repository.MemberRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -18,7 +19,6 @@ import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -60,7 +60,7 @@ public class MemberService {
      * @param memberRequestDto
      * @return MemberResponseDto
      */
-    public MemberResponseDto signUp(MemberRequestDto memberRequestDto) throws InvalidAdminTokenException {
+    public MemberResponseDto signUp(MemberRequestDto memberRequestDto) {
         ModelMapper mapper = new ModelMapper();
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 
@@ -71,7 +71,7 @@ public class MemberService {
             //관리자 권한으로 가입 요청
             if (memberRequestDto.isAdmin()) {
                 if (!ADMIN_TOKEN.equals(memberRequestDto.getAdminToken())) {
-                    throw new InvalidAdminTokenException("관리자로 가입할 수 없습니다.");
+                    throw new CustomException(ErrorCode.INVALID_ADMIN_TOKEN);
                 }
                 log.info("관리자 가입 요청이 승인되었습니다.");
                 role = UserRoleEnum.ADMIN;
@@ -88,18 +88,14 @@ public class MemberService {
 
         } catch (DataIntegrityViolationException e) {
             if (e.getMessage().contains("phone_UNIQUE")) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 전화번호입니다.");
+                throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS);
             } else if (e.getMessage().contains("email_UNIQUE")) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다.");
+                throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
             } else {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "중복된 데이터가 존재합니다.");
+                throw new CustomException(ErrorCode.DUPLICATE_DATA);
             }
-        } catch (InvalidAdminTokenException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "관리자 가입 요청이 거부되었습니다.");
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "잘못된 요청입니다.");
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "회원가입 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
         }
     }
 
@@ -110,10 +106,8 @@ public class MemberService {
      * @return MemberDto
      */
     public MemberResponseDto getMemberByMemberId(Long memberId) {
-        Member member = memberRepository.findById(memberId).orElse(null);
-        if (member == null) {
-            throw new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다.");
-        }
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         MemberResponseDto memberResponseDto = new ModelMapper().map(member, MemberResponseDto.class);
 
         //주문 내역 조회

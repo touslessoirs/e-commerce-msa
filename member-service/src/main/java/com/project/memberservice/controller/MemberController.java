@@ -3,7 +3,6 @@ package com.project.memberservice.controller;
 import com.project.memberservice.dto.MemberRequestDto;
 import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.entity.Member;
-import com.project.memberservice.exception.InvalidAdminTokenException;
 import com.project.memberservice.service.MemberService;
 import io.micrometer.core.annotation.Timed;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +15,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,11 +55,7 @@ public class MemberController {
 //        mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 //
         MemberResponseDto memberResponseDto = null;
-        try {
-            memberResponseDto = memberService.signUp(memberRequestDto);
-        } catch (InvalidAdminTokenException e) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
-        }
+        memberResponseDto = memberService.signUp(memberRequestDto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponseDto);
     }

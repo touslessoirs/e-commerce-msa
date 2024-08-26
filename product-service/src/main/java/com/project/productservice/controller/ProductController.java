@@ -1,7 +1,6 @@
 package com.project.productservice.controller;
 
 import com.project.productservice.dto.ProductResponseDto;
-import com.project.productservice.exception.ProductNotFoundException;
 import com.project.productservice.service.ProductService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -57,20 +56,15 @@ public class ProductController {
 
     /* 상품 상세 조회 */
     @GetMapping("/{productId}")
-    public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable Long productId) throws ProductNotFoundException {
+    public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable Long productId) {
         log.info("getProductDetail 호출");
         ProductResponseDto productResponseDto = productService.getProductDetail(productId);
-
-        if (productResponseDto != null) {
-            return ResponseEntity.ok(productResponseDto);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+        return ResponseEntity.ok(productResponseDto);
     }
 
     /* 재고 update (for feign client) */
     @PutMapping("/{productId}")
-    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("orderQuantity") int orderQuantity) throws ProductNotFoundException {
+    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("orderQuantity") int orderQuantity) {
         log.info("updateStock 호출");
         productService.updateStock(productId, orderQuantity);
     }

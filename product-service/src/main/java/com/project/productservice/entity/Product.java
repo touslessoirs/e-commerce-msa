@@ -7,7 +7,7 @@ import java.io.Serializable;
 
 @Data
 @Entity
-@Table(name = "product")
+@Table(name = "products")
 public class Product extends Timestamped implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

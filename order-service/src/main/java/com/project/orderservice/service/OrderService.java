@@ -3,8 +3,9 @@ package com.project.orderservice.service;
 import com.project.orderservice.client.ProductServiceClient;
 import com.project.orderservice.dto.*;
 import com.project.orderservice.entity.*;
+import com.project.orderservice.exception.CustomException;
+import com.project.orderservice.exception.ErrorCode;
 import com.project.orderservice.exception.FeignErrorDecoder;
-import com.project.orderservice.exception.OrderNotFoundException;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
@@ -106,26 +107,35 @@ public class OrderService {
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
 
-        //주문 정보 저장
-        Order order = saveOrder(memberId, orderRequestDto);
+        try {
+            //주문 정보 저장
+            Order order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
 
-        //배송 정보 저장
-        saveShipping(order, orderRequestDto.getShipping());
+            //결제 처리 및 결제 정보 저장
+            Payment payment = createPayment(order); //PAYMENT_PENDING
+            savePayment(payment);    //PAYMENT_FAILED or PAYMENT_COMPLETED
 
-        //결제 처리 및 결제 정보 저장
-        createPayment(order);
+            //결제 성공여부 분기 처리
+            if (payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
+                //성공 -> 배송 정보 저장
+                saveShipping(order, orderRequestDto.getShipping());
 
-        //OrderResponseDto 반환
-        ModelMapper mapper = new ModelMapper();
-        mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-        OrderResponseDto orderResponseDto = mapper.map(order, OrderResponseDto.class);
-
-        return orderResponseDto;
+                //return OrderResponseDto
+                ModelMapper mapper = new ModelMapper();
+                mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
+                OrderResponseDto orderResponseDto = mapper.map(order, OrderResponseDto.class);
+                return orderResponseDto;
+            } else {
+                throw new CustomException(ErrorCode.PAYMENT_FAILED);
+            }
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
     }
 
     /**
      * 주문 정보 저장
-     * 
+     *
      * @param memberId
      * @param orderRequestDto
      * @return
@@ -175,7 +185,7 @@ public class OrderService {
 
     /**
      * 배송 정보 저장
-     * 
+     *
      * @param order
      * @param shippingRequestDto
      */
@@ -192,14 +202,39 @@ public class OrderService {
 
     /**
      * 결제 정보 생성
-     * 
+     *
      * @param order
-     * @return
+     * @return Payment
      */
-    public void createPayment(Order order) {
+    public Payment createPayment(Order order) {
         Payment payment = new Payment();
         payment.setOrder(order);
         payment.setStatus(PaymentStatusEnum.PAYMENT_PENDING);
+
+        return payment;
+    }
+
+    /**
+     * 결제 처리 및 결제 정보 저장
+     * PAYMENT_PENDING -> PAYMENT_COMPLETED
+     * 고객 이탈율 시나리오 : 이탈율 20%
+     *
+     * @param payment
+     * @return
+     */
+    public void savePayment(Payment payment) {
+        // PAYMENT_PENDING -> PAYMENT_COMPLETED 과정에서 이탈
+        // ex) 잔액 부족으로 인한 결제 실패)
+        if (Math.random() < 0.20) { //20%
+            payment.setStatus(PaymentStatusEnum.PAYMENT_FAILED);
+            payment.getOrder().setStatus(OrderStatusEnum.PAYMENT_FAILED);
+        } else {
+            payment.setStatus(PaymentStatusEnum.PAYMENT_COMPLETED);
+            payment.getOrder().setStatus(OrderStatusEnum.PAYMENT_COMPLETED);
+        }
+
+        paymentRepository.save(payment);
+        orderRepository.save(payment.getOrder());
     }
 
     /**
@@ -228,11 +263,9 @@ public class OrderService {
      * @param orderId
      * @return
      */
-    public OrderResponseDto getOrderDetail(Long orderId) throws OrderNotFoundException {
-        Order order = orderRepository.findById(orderId).orElse(null);
-        if (order == null) {
-            throw new OrderNotFoundException();
-        }
+    public OrderResponseDto getOrderDetail(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
         OrderResponseDto orderResponseDto = new ModelMapper().map(order, OrderResponseDto.class);
 
         return orderResponseDto;
