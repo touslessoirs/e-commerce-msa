@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -35,17 +38,20 @@ public class MemberService {
     private final Environment env;
     private final OrderServiceClient orderServiceClient;
     private final FeignErrorDecoder feignErrorDecoder;
+    private final CircuitBreakerFactory circuitBreakerFactory;
 
     public MemberService(MemberRepository memberRepository,
                          PasswordEncoder passwordEncoder,
                          Environment env,
                          OrderServiceClient orderServiceClient,
-                         FeignErrorDecoder feignErrorDecoder) {
+                         FeignErrorDecoder feignErrorDecoder,
+                         CircuitBreakerFactory circuitBreakerFactory) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.env = env;
         this.orderServiceClient = orderServiceClient;
         this.feignErrorDecoder = feignErrorDecoder;
+        this.circuitBreakerFactory = circuitBreakerFactory;
     }
 
     /**
@@ -111,7 +117,10 @@ public class MemberService {
         MemberResponseDto memberResponseDto = new ModelMapper().map(member, MemberResponseDto.class);
 
         //주문 내역 조회
-        List<OrderResponseDto> orders = orderServiceClient.getOrdersByMemberId(memberId);
+//        List<OrderResponseDto> orders = orderServiceClient.getOrdersByMemberId(memberId);
+        CircuitBreaker circuitBreaker = circuitBreakerFactory.create("circuitBreaker");
+        List<OrderResponseDto> orders = circuitBreaker.run(() -> orderServiceClient.getOrdersByMemberId(memberId),
+                throwable -> new ArrayList<>());
         memberResponseDto.setOrders(orders);
 
         return memberResponseDto;
@@ -126,17 +135,4 @@ public class MemberService {
         return memberRepository.findAll();
     }
 
-
-//    /**
-//     * 이메일 인증 완료
-//     * is_verified 컬럼 1(true)로 업데이트
-//     *
-//     * @param email
-//     */
-//    @Transactional
-//    public void updateVerificationStatus(String email) {
-//        Member member = memberRepository.findByEmail(email);
-//        member.setIsVerified(1);  //true
-//        memberRepository.save(member);
-//    }
 }

@@ -43,22 +43,6 @@ public class OrderService {
         this.shippingRepository = shippingRepository;
     }
 
-//    /**
-//     * 상품 주문
-//     *
-//     * @param orderDto
-//     * @return
-//     */
-//    public OrderDto createOrder(OrderDto orderDto) {
-//        ModelMapper mapper = new ModelMapper();
-//        mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-//        Order order = mapper.map(orderDto, Order.class);
-//
-//        orderRepository.save(order);
-//
-//        OrderDto returnValue = mapper.map(order, OrderDto.class);
-//        return returnValue;
-//    }
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
         List<OrderProduct> orderProductList = new ArrayList<>();

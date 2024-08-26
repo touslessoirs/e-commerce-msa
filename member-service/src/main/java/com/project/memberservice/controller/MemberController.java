@@ -5,6 +5,7 @@ import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.exception.InvalidAdminTokenException;
 import com.project.memberservice.service.MemberService;
+import io.micrometer.core.annotation.Timed;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class MemberController {
     }
 
     @GetMapping("/health-check")
+    @Timed(value = "member.health-check", longTask = true)
     public String status() {
         return String.format("MEMBER SERVICE Running on PORT "
                 + env.getProperty("server.port")
@@ -44,6 +46,7 @@ public class MemberController {
     }
 
     @GetMapping("/welcome")
+    @Timed(value = "member.welcome", longTask = true)
     public String welcome(HttpServletRequest request, HttpServletResponse response) {
         return greeting;
     }
@@ -54,14 +57,12 @@ public class MemberController {
         ModelMapper mapper = new ModelMapper();
         mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 
-//        MemberDto memberDto = mapper.map(memberRequestDto, MemberDto.class);
         MemberResponseDto memberResponseDto = null;
         try {
             memberResponseDto = memberService.signUp(memberRequestDto);
         } catch (InvalidAdminTokenException e) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
         }
-//        MemberResponseDto memberResponseDto = mapper.map(savedMemberDto, MemberResponseDto.class);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponseDto);
     }

@@ -1,4 +1,4 @@
-package com.project.memberservice.mail.redis;
+package com.project.memberservice.mail;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;

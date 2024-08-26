@@ -2,7 +2,7 @@ package com.project.memberservice.mail.service;
 
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.mail.dto.MailCheckDto;
-import com.project.memberservice.mail.redis.RedisUtil;
+import com.project.memberservice.mail.RedisUtil;
 import com.project.memberservice.repository.MemberRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

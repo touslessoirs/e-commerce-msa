@@ -47,18 +47,6 @@ public class OrderController {
     }
 
     /* 상품 주문 */
-//    @PostMapping("/{memberId}/orders")
-//    public ResponseEntity<OrderResponse> createOrder(@PathVariable("memberId") Long memberId, @RequestBody OrderRequest orderRequest) {
-//        ModelMapper mapper = new ModelMapper();
-//        mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-//
-//        OrderDto orderDto = mapper.map(orderRequest, OrderDto.class);
-//        orderDto.setMemberId(memberId);
-//        OrderDto createdOrder = orderService.createOrder(orderDto);
-//        OrderResponse orderResponse = mapper.map(createdOrder, OrderResponse.class);
-//
-//        return ResponseEntity.status(HttpStatus.CREATED).body(orderResponse);
-//    }
     @PostMapping("/{memberId}/orders")
     public ResponseEntity createOrder(@PathVariable("memberId") Long memberId, @Valid @RequestBody OrderRequestDto orderRequestDto) {
         OrderResponseDto orderResponseDto;
