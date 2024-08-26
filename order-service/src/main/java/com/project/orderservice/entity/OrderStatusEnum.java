@@ -1,6 +1,7 @@
 package com.project.orderservice.entity;
 
 public enum OrderStatusEnum {
+    PAYMENT_PENDING("결제 대기중"),
     PAYMENT_COMPLETED("결제 완료"),
     SHIPPING("배송중"),
     DELIVERED("배송 완료"),

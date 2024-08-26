@@ -29,7 +29,7 @@ public class Order extends Timestamped implements Serializable {
     @Builder.Default
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
-    private OrderStatusEnum status = OrderStatusEnum.PAYMENT_COMPLETED;
+    private OrderStatusEnum status = OrderStatusEnum.PAYMENT_PENDING;
 
     @Column(name = "user_id", nullable = false)
     private Long memberId;
