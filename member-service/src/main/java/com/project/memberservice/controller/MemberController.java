@@ -7,6 +7,7 @@ import com.project.memberservice.service.MemberService;
 import io.micrometer.core.annotation.Timed;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,12 +51,8 @@ public class MemberController {
 
     /* 회원 가입 */
     @PostMapping("/members")
-    public ResponseEntity<MemberResponseDto> signUp(@RequestBody MemberRequestDto memberRequestDto) {
-//        ModelMapper mapper = new ModelMapper();
-//        mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-//
-        MemberResponseDto memberResponseDto = null;
-        memberResponseDto = memberService.signUp(memberRequestDto);
+    public ResponseEntity<MemberResponseDto> signUp(@Valid @RequestBody MemberRequestDto memberRequestDto) {
+        MemberResponseDto memberResponseDto = memberService.signUp(memberRequestDto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponseDto);
     }

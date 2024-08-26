@@ -2,10 +2,14 @@ package com.project.memberservice.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @Slf4j
@@ -35,5 +39,14 @@ public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
                 "SERVER-002",
                 "데이터베이스 오류가 발생했습니다."
         );
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+                                                                  HttpHeaders headers,
+                                                                  HttpStatusCode status,
+                                                                  WebRequest request) {
+        ResponseEntity<ErrorResponseEntity> responseEntity = ErrorResponseEntity.fromMethodArgumentNotValidException(ex);
+        return new ResponseEntity<>(responseEntity.getBody(), responseEntity.getStatusCode());
     }
 }
