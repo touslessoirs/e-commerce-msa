@@ -18,10 +18,8 @@ import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,15 +85,9 @@ public class MemberService {
             return memberResponseDto;
 
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage().contains("phone_UNIQUE")) {
-                throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS);
-            } else if (e.getMessage().contains("email_UNIQUE")) {
-                throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
-            } else {
-                throw new CustomException(ErrorCode.DUPLICATE_DATA);
-            }
+            throw e;
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "잘못된 요청입니다.");
+            throw e;
         }
     }
 

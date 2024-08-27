@@ -13,6 +13,7 @@ import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,10 +127,15 @@ public class OrderService {
                 OrderResponseDto orderResponseDto = mapper.map(order, OrderResponseDto.class);
                 return orderResponseDto;
             } else {
+                //결제 실패
                 throw new CustomException(ErrorCode.PAYMENT_FAILED);
             }
+        } catch (DataIntegrityViolationException e) {
+            throw e;
+        } catch (CustomException e) {
+            throw e;
         } catch (Exception e) {
-            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+            throw new CustomException(ErrorCode.PAYMENT_FAILED, e);
         }
     }
 
@@ -224,7 +230,7 @@ public class OrderService {
      */
     public void savePayment(Payment payment) {
         // PAYMENT_PENDING -> PAYMENT_COMPLETED 과정에서 이탈
-        // ex) 잔액 부족으로 인한 결제 실패)
+        // ex) 잔액 부족으로 인한 결제 실패
         if (Math.random() < 0.20) { //20%
             payment.setStatus(PaymentStatusEnum.PAYMENT_FAILED);
             payment.getOrder().setStatus(OrderStatusEnum.PAYMENT_FAILED);

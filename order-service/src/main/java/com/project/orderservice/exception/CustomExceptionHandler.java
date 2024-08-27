@@ -2,7 +2,7 @@ package com.project.orderservice.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
-import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,27 +13,29 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
-    protected ResponseEntity<ErrorResponseEntity> handleCustomException(CustomException e){
+    protected ResponseEntity<ErrorResponseEntity> handleCustomException(CustomException e) {
         return ErrorResponseEntity.toResponseEntity(e.getErrorCode());
     }
 
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ErrorResponseEntity> handleGeneralException(Exception e) {
-        return ErrorResponseEntity.toResponseEntity(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "GENERAL_EXCEPTION",
-                "SERVER-001",
-                "서버 오류가 발생했습니다."
-        );
+        ErrorCode errorCode = ErrorCode.GENERAL_EXCEPTION;
+        return ErrorResponseEntity.toResponseEntity(errorCode);
     }
 
     @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ErrorResponseEntity> handleDataAccessException(DataAccessException ex) {
-        return ErrorResponseEntity.toResponseEntity(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "DATA_ACCESS_EXCEPTION",
-                "SERVER-002",
-                "데이터베이스 오류가 발생했습니다."
-        );
+    public ResponseEntity<ErrorResponseEntity> handleDataAccessException(DataAccessException e) {
+        ErrorCode errorCode = ErrorCode.DATA_ACCESS_EXCEPTION;
+        return ErrorResponseEntity.toResponseEntity(errorCode);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseEntity> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        if (e.getMessage().contains("foreign key constraint fails") && e.getMessage().contains("fk_order_user")) {
+            return ErrorResponseEntity.toResponseEntity(ErrorCode.USER_NOT_FOUND);
+        }
+
+        ErrorCode errorCode = ErrorCode.DATA_INTEGRITY_VIOLATION;
+        return ErrorResponseEntity.toResponseEntity(errorCode);
     }
 }

@@ -11,7 +11,9 @@ public class CustomException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    public ErrorCode getErrorCode() {
-        return errorCode;
+    // 원인 예외 포함
+    public CustomException(ErrorCode errorCode, Exception e) {
+        super(errorCode.getMessage(), e);
+        this.errorCode = errorCode;
     }
 }

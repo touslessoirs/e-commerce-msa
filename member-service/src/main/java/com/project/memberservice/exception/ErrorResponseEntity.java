@@ -45,9 +45,9 @@ public class ErrorResponseEntity {
         ErrorCode errorCode = ErrorCode.INVALID_REQUEST_CONTENT;
 
         ErrorResponseEntity errorResponse = ErrorResponseEntity.builder()
-                .status(errorCode.getHttpStatus().value()) // HttpStatus를 가져옴
-                .name(errorCode.name()) // Enum 이름을 가져옴
-                .code(errorCode.getCode()) // 코드 값을 가져옴
+                .status(errorCode.getHttpStatus().value())
+                .name(errorCode.name())
+                .code(errorCode.getCode())
                 .message(fieldName + " 필드의 입력값 [" + rejectedValue + "]이 유효하지 않습니다.")
                 .build();
 
