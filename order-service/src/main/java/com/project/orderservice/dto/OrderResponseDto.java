@@ -1,5 +1,6 @@
 package com.project.orderservice.dto;
 
+import com.project.orderservice.entity.Order;
 import com.project.orderservice.entity.OrderStatusEnum;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,13 +18,13 @@ public class OrderResponseDto {
 
     private Long memberId;
 
-    public OrderResponseDto(Long orderId, int totalPrice, int totalQuantity, OrderStatusEnum status, LocalDateTime createdAt, Long memberId) {
-        this.orderId = orderId;
-        this.totalPrice = totalPrice;
-        this.totalQuantity = totalQuantity;
-        this.status = status;
-        this.createdAt = createdAt;
-        this.memberId = memberId;
+    public OrderResponseDto(Order order) {
+        this.orderId = order.getOrderId();
+        this.totalPrice = order.getTotalPrice();
+        this.totalQuantity = order.getTotalQuantity();
+        this.status = order.getStatus();
+        this.createdAt = order.getCreatedAt();
+        this.memberId = order.getMemberId();
     }
 }
 

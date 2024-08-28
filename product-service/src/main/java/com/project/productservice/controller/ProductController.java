@@ -5,7 +5,6 @@ import com.project.productservice.service.ProductService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -47,9 +46,7 @@ public class ProductController {
         Iterable<ProductResponseDto> productList = productService.getAllProducts();
 
         List<ProductResponseDto> result = new ArrayList<>();
-        productList.forEach(v -> {
-            result.add(new ModelMapper().map(v, ProductResponseDto.class));
-        });
+        productList.forEach(result::add);
 
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }

@@ -83,15 +83,7 @@ public class MemberService {
 
             Member savedMember = memberRepository.save(member);
 
-            MemberResponseDto memberResponseDto = new MemberResponseDto(
-                    savedMember.getMemberId(),
-                    savedMember.getEmail(),
-                    savedMember.getName(),
-                    savedMember.getAddress(),
-                    savedMember.getAddressDetail(),
-                    savedMember.getPhone(),
-                    savedMember.getCreatedAt()
-            );
+            MemberResponseDto memberResponseDto = new MemberResponseDto(savedMember);
             return memberResponseDto;
 
         } catch (DataIntegrityViolationException e) {
@@ -110,15 +102,7 @@ public class MemberService {
     public MemberResponseDto getMemberByMemberId(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        MemberResponseDto memberResponseDto = new MemberResponseDto(
-                member.getMemberId(),
-                member.getEmail(),
-                member.getName(),
-                member.getAddress(),
-                member.getAddressDetail(),
-                member.getPhone(),
-                member.getCreatedAt()
-        );
+        MemberResponseDto memberResponseDto = new MemberResponseDto(member);
 
         //주문 내역 조회
         CircuitBreaker circuitBreaker = circuitBreakerFactory.create("circuitBreaker");

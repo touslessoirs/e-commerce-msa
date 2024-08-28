@@ -127,14 +127,7 @@ public class OrderService {
             }
 
             //return OrderResponseDto
-            OrderResponseDto orderResponseDto = new OrderResponseDto(
-                    order.getOrderId(),
-                    order.getTotalPrice(),
-                    order.getTotalQuantity(),
-                    order.getStatus(),
-                    order.getCreatedAt(),
-                    order.getMemberId()
-            );
+            OrderResponseDto orderResponseDto = new OrderResponseDto(order);
             return orderResponseDto;
 
         } catch (DataIntegrityViolationException e) {
@@ -289,14 +282,7 @@ public class OrderService {
                 .collect(Collectors.toList());
 
         return orderList.stream()
-                .map(order -> new OrderResponseDto(
-                        order.getOrderId(),
-                        order.getTotalPrice(),
-                        order.getTotalQuantity(),
-                        order.getStatus(),
-                        order.getCreatedAt(),
-                        order.getMemberId()
-                ))
+                .map(order -> new OrderResponseDto(order))
                 .collect(Collectors.toList());
     }
 
@@ -310,14 +296,7 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
-        OrderResponseDto orderResponseDto = new OrderResponseDto(
-                order.getOrderId(),
-                order.getTotalPrice(),
-                order.getTotalQuantity(),
-                order.getStatus(),
-                order.getCreatedAt(),
-                order.getMemberId()
-        );
+        OrderResponseDto orderResponseDto = new OrderResponseDto(order);
         return orderResponseDto;
     }
 

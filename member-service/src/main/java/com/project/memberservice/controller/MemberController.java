@@ -66,15 +66,7 @@ public class MemberController {
 
         List<MemberResponseDto> result = new ArrayList<>();
         memberList.forEach(member -> {
-            result.add(new MemberResponseDto(
-                    member.getMemberId(),
-                    member.getEmail(),
-                    member.getName(),
-                    member.getAddress(),
-                    member.getAddressDetail(),
-                    member.getPhone(),
-                    member.getCreatedAt()
-            ));
+            result.add(new MemberResponseDto(member));
         });
 
         return ResponseEntity.status(HttpStatus.OK).body(result);

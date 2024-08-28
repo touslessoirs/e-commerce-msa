@@ -1,6 +1,7 @@
 package com.project.productservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.project.productservice.entity.Product;
 import lombok.Data;
 
 @Data
@@ -12,10 +13,10 @@ public class ProductResponseDto {
     private int stock;
     private String category;
 
-    public ProductResponseDto(String name, int unitPrice, int stock, String category) {
-        this.name = name;
-        this.unitPrice = unitPrice;
-        this.stock = stock;
-        this.category = category;
+    public ProductResponseDto(Product product) {
+        this.name = product.getName();
+        this.unitPrice = product.getUnitPrice();
+        this.stock = product.getStock();
+        this.category = product.getCategory();
     }
 }

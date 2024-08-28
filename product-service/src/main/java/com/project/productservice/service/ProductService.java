@@ -36,12 +36,7 @@ public class ProductService {
                 .collect(Collectors.toList());
 
         return productList.stream()
-                .map(product -> new ProductResponseDto(
-                        product.getName(),
-                        product.getUnitPrice(),
-                        product.getStock(),
-                        product.getCategory()
-                ))
+                .map(product -> new ProductResponseDto(product))
                 .collect(Collectors.toList());
     }
 
@@ -55,12 +50,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        ProductResponseDto productResponseDto = new ProductResponseDto(
-                product.getName(),
-                product.getUnitPrice(),
-                product.getStock(),
-                product.getCategory()
-        );
+        ProductResponseDto productResponseDto = new ProductResponseDto(product);
         return productResponseDto;
     }
 
@@ -71,8 +61,10 @@ public class ProductService {
      * @param productId     (감소 -, 증가 +)
      * @param orderQuantity
      */
-    @Transactional
-    public void updateStock(Long productId, int orderQuantity) {
+    /* synchronized */
+    /* Pessimistic Lock */
+    @Transactional(readOnly = false)
+    public synchronized void updateStock(Long productId, int orderQuantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -84,4 +76,34 @@ public class ProductService {
 
         productRepository.save(product);
     }
+
+    /* Optimistic Lock */
+//    @Transactional
+//    public synchronized void updateStock(Long productId, int orderQuantity) {
+//
+//        int retryCount = 3; // 재시도 횟수 설정
+//        while (retryCount > 0) {
+//            try {
+//                Product product = productRepository.findById(productId)
+//                        .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+//
+//                product.setStock(product.getStock() + orderQuantity);
+//
+//                if (product.getStock() < 0) {
+//                    throw new CustomException(ErrorCode.OUT_OF_STOCK);
+//                }
+//
+//                productRepository.save(product);
+//                break;
+//            } catch (OptimisticLockException e) {
+//                log.info("낙관적 락 충돌 - 재시도");
+//
+//                retryCount--;
+//                if (retryCount == 0) {
+//                    throw new CustomException(ErrorCode.CONCURRENCY_FAILURE);
+//                }
+//            }
+//        }
+//    }
+
 }

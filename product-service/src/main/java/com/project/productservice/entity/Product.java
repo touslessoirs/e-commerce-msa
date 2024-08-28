@@ -26,4 +26,7 @@ public class Product extends Timestamped implements Serializable {
     @Column(length = 50)
     private String category;
 
+//    @Version
+//    private int version; // 낙관적 락
+
 }

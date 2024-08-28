@@ -1,6 +1,7 @@
 package com.project.memberservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.project.memberservice.entity.Member;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -19,13 +20,13 @@ public class MemberResponseDto {
 
     private List<OrderResponseDto> orders;
 
-    public MemberResponseDto(Long memberId, String email, String name, String address, String addressDetail, String phone, LocalDateTime createdAt) {
-        this.memberId = memberId;
-        this.email = email;
-        this.name = name;
-        this.address = address;
-        this.addressDetail = addressDetail;
-        this.phone = phone;
-        this.createdAt = createdAt;
+    public MemberResponseDto(Member member){
+        this.memberId = member.getMemberId();
+        this.email = member.getEmail();
+        this.name = member.getName();
+        this.address = member.getAddress();
+        this.addressDetail = member.getAddressDetail();
+        this.phone = member.getPhone();
+        this.createdAt = member.getCreatedAt();
     }
 }
