@@ -37,13 +37,14 @@ public class OrderService {
     public OrderService(OrderRepository orderRepository, OrderProductRepository orderProductRepository,
                         ShippingRepository shippingRepository, PaymentRepository paymentRepository,
                         ProductServiceClient productServiceClient,
-                        FeignErrorDecoder feignErrorDecoder) {
+                        FeignErrorDecoder feignErrorDecoder
+    ) {
         this.orderRepository = orderRepository;
+        this.orderProductRepository = orderProductRepository;
         this.shippingRepository = shippingRepository;
         this.paymentRepository = paymentRepository;
         this.productServiceClient = productServiceClient;
         this.feignErrorDecoder = feignErrorDecoder;
-        this.orderProductRepository = orderProductRepository;
     }
 
 //    @Transactional
@@ -167,13 +168,12 @@ public class OrderService {
 
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
             Long productId = orderProductDto.getProductId();
+            log.info("productId : {}", productId);
             int quantity = orderProductDto.getQuantity();
             int unitPrice = orderProductDto.getUnitPrice();
 
-            //Product 통신 -> 상품 상세 조회 (해당 상품 존재하지 않을 경우 예외 발생)
-            productServiceClient.getProductDetail(productId);
-
             //Product 통신 -> 재고 감소
+            log.info("updateStock feign client 호출");
             productServiceClient.updateStock(productId, orderProductDto.getQuantity()*(-1));
 
             // 주문 상품 정보 생성

@@ -14,7 +14,6 @@ public interface OrderServiceClient {
     @GetMapping("/{memberId}/orders")
     public ResponseEntity<List<OrderResponseDto>> getOrdersByMemberId(@PathVariable("memberId") Long memberId);
 
-    // ErrorfulController's endpoints
     @GetMapping("/errorful/case1")
     public ResponseEntity<String> getCase1Response();
 
