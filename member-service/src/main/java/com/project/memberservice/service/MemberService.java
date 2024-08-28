@@ -11,13 +11,12 @@ import com.project.memberservice.exception.ErrorCode;
 import com.project.memberservice.exception.FeignErrorDecoder;
 import com.project.memberservice.repository.MemberRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
-import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -59,9 +58,6 @@ public class MemberService {
      * @return MemberResponseDto
      */
     public MemberResponseDto signUp(MemberRequestDto memberRequestDto) {
-        ModelMapper mapper = new ModelMapper();
-        mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-
         try {
             // 사용자 ROLE 확인
             UserRoleEnum role = UserRoleEnum.USER;  //default
@@ -75,13 +71,27 @@ public class MemberService {
                 role = UserRoleEnum.ADMIN;
             }
 
-            Member member = mapper.map(memberRequestDto, Member.class);
-            member.setPassword(passwordEncoder.encode(member.getPassword()));
-            member.setRole(role);
+            Member member = new Member(
+                    memberRequestDto.getEmail(),
+                    passwordEncoder.encode(memberRequestDto.getPassword()),
+                    memberRequestDto.getName(),
+                    memberRequestDto.getPhone(),
+                    memberRequestDto.getAddress(),
+                    memberRequestDto.getAddressDetail(),
+                    role
+            );
 
             Member savedMember = memberRepository.save(member);
 
-            MemberResponseDto memberResponseDto = mapper.map(savedMember, MemberResponseDto.class);
+            MemberResponseDto memberResponseDto = new MemberResponseDto(
+                    savedMember.getMemberId(),
+                    savedMember.getEmail(),
+                    savedMember.getName(),
+                    savedMember.getAddress(),
+                    savedMember.getAddressDetail(),
+                    savedMember.getPhone(),
+                    savedMember.getCreatedAt()
+            );
             return memberResponseDto;
 
         } catch (DataIntegrityViolationException e) {
@@ -100,13 +110,25 @@ public class MemberService {
     public MemberResponseDto getMemberByMemberId(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        MemberResponseDto memberResponseDto = new ModelMapper().map(member, MemberResponseDto.class);
+        MemberResponseDto memberResponseDto = new MemberResponseDto(
+                member.getMemberId(),
+                member.getEmail(),
+                member.getName(),
+                member.getAddress(),
+                member.getAddressDetail(),
+                member.getPhone(),
+                member.getCreatedAt()
+        );
 
         //주문 내역 조회
-//        List<OrderResponseDto> orders = orderServiceClient.getOrdersByMemberId(memberId);
         CircuitBreaker circuitBreaker = circuitBreakerFactory.create("circuitBreaker");
-        List<OrderResponseDto> orders = circuitBreaker.run(() -> orderServiceClient.getOrdersByMemberId(memberId),
-                throwable -> new ArrayList<>());
+        List<OrderResponseDto> orders = circuitBreaker.run(() -> {
+            ResponseEntity<List<OrderResponseDto>> responseEntity = orderServiceClient.getOrdersByMemberId(memberId);
+            return responseEntity.getBody();
+        }, throwable -> {
+            return new ArrayList<>();
+        });
+
         memberResponseDto.setOrders(orders);
 
         return memberResponseDto;

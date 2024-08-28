@@ -6,7 +6,6 @@ import com.project.productservice.exception.CustomException;
 import com.project.productservice.exception.ErrorCode;
 import com.project.productservice.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,10 +35,13 @@ public class ProductService {
         List<Product> productList = StreamSupport.stream(products.spliterator(), false)
                 .collect(Collectors.toList());
 
-        //Product to ProductResponseDto
-        ModelMapper modelMapper = new ModelMapper();
         return productList.stream()
-                .map(order -> modelMapper.map(order, ProductResponseDto.class))
+                .map(product -> new ProductResponseDto(
+                        product.getName(),
+                        product.getUnitPrice(),
+                        product.getStock(),
+                        product.getCategory()
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -52,7 +54,13 @@ public class ProductService {
     public ProductResponseDto getProductDetail(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-        ProductResponseDto productResponseDto = new ModelMapper().map(product, ProductResponseDto.class);
+
+        ProductResponseDto productResponseDto = new ProductResponseDto(
+                product.getName(),
+                product.getUnitPrice(),
+                product.getStock(),
+                product.getCategory()
+        );
         return productResponseDto;
     }
 
@@ -60,18 +68,20 @@ public class ProductService {
      * 재고 update (for feign client)
      * stock -= orderquantity
      *
-     * @param productId
+     * @param productId     (감소 -, 증가 +)
      * @param orderQuantity
      */
     @Transactional
     public void updateStock(Long productId, int orderQuantity) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-        if (product.getStock() < orderQuantity) {
-            log.info("재고가 부족합니다.");
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        product.setStock(product.getStock() + orderQuantity);
+
+        if (product.getStock() < 0) {
             throw new CustomException(ErrorCode.OUT_OF_STOCK);
         }
 
-        product.setStock(product.getStock() - orderQuantity);
         productRepository.save(product);
     }
 }

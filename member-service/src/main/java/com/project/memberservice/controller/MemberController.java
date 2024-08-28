@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
@@ -66,8 +65,16 @@ public class MemberController {
         Iterable<Member> memberList = memberService.getAllMembers();
 
         List<MemberResponseDto> result = new ArrayList<>();
-        memberList.forEach(v -> {
-            result.add(new ModelMapper().map(v, MemberResponseDto.class));
+        memberList.forEach(member -> {
+            result.add(new MemberResponseDto(
+                    member.getMemberId(),
+                    member.getEmail(),
+                    member.getName(),
+                    member.getAddress(),
+                    member.getAddressDetail(),
+                    member.getPhone(),
+                    member.getCreatedAt()
+            ));
         });
 
         return ResponseEntity.status(HttpStatus.OK).body(result);

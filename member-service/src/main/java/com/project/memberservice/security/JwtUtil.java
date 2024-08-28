@@ -41,10 +41,10 @@ public class JwtUtil {
 
         return Jwts.builder()
                 .setSubject(username) // 사용자 식별자값(ID)
-                .claim(AUTHORIZATION_KEY, role) // 사용자 권한
-                .setExpiration(new Date(date.getTime() + expirationTime)) // 만료 시간
-                .setIssuedAt(date) // 발급일
-                .signWith(key, signatureAlgorithm) // 암호화 알고리즘
+                .claim(AUTHORIZATION_KEY, role)
+                .setExpiration(new Date(date.getTime() + expirationTime))
+                .setIssuedAt(date)
+                .signWith(key, signatureAlgorithm)
                 .compact();
     }
 
@@ -79,13 +79,13 @@ public class JwtUtil {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     }
 
-    public static byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i + 1), 16));
-        }
-        return data;
-    }
+//    public static byte[] hexStringToByteArray(String s) {
+//        int len = s.length();
+//        byte[] data = new byte[len / 2];
+//        for (int i = 0; i < len; i += 2) {
+//            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+//                    + Character.digit(s.charAt(i + 1), 16));
+//        }
+//        return data;
+//    }
 }

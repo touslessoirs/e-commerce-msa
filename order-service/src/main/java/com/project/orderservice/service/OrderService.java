@@ -1,7 +1,10 @@
 package com.project.orderservice.service;
 
 import com.project.orderservice.client.ProductServiceClient;
-import com.project.orderservice.dto.*;
+import com.project.orderservice.dto.OrderProductRequestDto;
+import com.project.orderservice.dto.OrderRequestDto;
+import com.project.orderservice.dto.OrderResponseDto;
+import com.project.orderservice.dto.ShippingRequestDto;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
@@ -11,8 +14,6 @@ import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
-import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,10 +108,13 @@ public class OrderService {
 
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
+        log.info("상품 페이지에서 주문 요청");
+
+        Order order = null;
 
         try {
             //주문 정보 저장
-            Order order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
+            order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
 
             //결제 처리 및 결제 정보 저장
             Payment payment = createPayment(order); //PAYMENT_PENDING
@@ -120,22 +124,37 @@ public class OrderService {
             if (payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
                 //성공 -> 배송 정보 저장
                 saveShipping(order, orderRequestDto.getShipping());
-
-                //return OrderResponseDto
-                ModelMapper mapper = new ModelMapper();
-                mapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-                OrderResponseDto orderResponseDto = mapper.map(order, OrderResponseDto.class);
-                return orderResponseDto;
-            } else {
-                //결제 실패
-                throw new CustomException(ErrorCode.PAYMENT_FAILED);
             }
+
+            //return OrderResponseDto
+            OrderResponseDto orderResponseDto = new OrderResponseDto(
+                    order.getOrderId(),
+                    order.getTotalPrice(),
+                    order.getTotalQuantity(),
+                    order.getStatus(),
+                    order.getCreatedAt(),
+                    order.getMemberId()
+            );
+            return orderResponseDto;
+
         } catch (DataIntegrityViolationException e) {
             throw e;
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
-            throw new CustomException(ErrorCode.PAYMENT_FAILED, e);
+            throw new CustomException(ErrorCode.ORDER_FAILED, e);
+        }
+    }
+
+    /**
+     * 주문 실패 시 DB에 주문 정보는 commit, 재고 감소는 rollback
+     *
+     * @param orderRequestDto
+     */
+    public void rollbackStock(OrderRequestDto orderRequestDto) {
+        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
+            // Product 통신 -> 재고 복구
+            productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
         }
     }
 
@@ -153,25 +172,23 @@ public class OrderService {
 
         Order order = new Order();
 
-        log.info("상품 페이지에서 주문 요청");
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-            Long productId = orderProductDto.getId();
-
-            //Product 통신 -> 상품 상세 조회
-            ProductResponseDto product = productServiceClient.getProductDetail(productId);
-
+            Long productId = orderProductDto.getProductId();
             int quantity = orderProductDto.getQuantity();
-            int price = orderProductDto.getPrice() * quantity;  //해당 상품의 총 가격
+            int unitPrice = orderProductDto.getUnitPrice();
 
-            //Product 통신 -> 재고 반영
-            productServiceClient.updateStock(productId, quantity);
+            //Product 통신 -> 상품 상세 조회 (해당 상품 존재하지 않을 경우 예외 발생)
+            productServiceClient.getProductDetail(productId);
+
+            //Product 통신 -> 재고 감소
+            productServiceClient.updateStock(productId, orderProductDto.getQuantity()*(-1));
 
             // 주문 상품 정보 생성
-            OrderProduct orderProduct = new OrderProduct(price, quantity, order, productId);
+            OrderProduct orderProduct= new OrderProduct(unitPrice, quantity, order, productId);
             orderProductList.add(orderProduct);
 
-            totalQuantity += quantity;
-            totalPrice += price;
+            totalQuantity += orderProductDto.getQuantity();
+            totalPrice += orderProductDto.getUnitPrice() * orderProductDto.getQuantity();
         }
 
         // 주문 정보 설정
@@ -180,13 +197,13 @@ public class OrderService {
         order.setTotalPrice(totalPrice);
         order.setStatus(OrderStatusEnum.PAYMENT_PENDING);
 
-        orderRepository.save(order);
+        Order saveOrder = orderRepository.save(order);
         log.info("주문 정보 저장 완료");
 
-        orderProductRepository.saveAll(orderProductList);
+        List<OrderProduct> orderProducts = orderProductRepository.saveAll(orderProductList);
         log.info("주문 상품 정보 저장 완료");
 
-        return order;
+        return saveOrder;
     }
 
     /**
@@ -240,7 +257,22 @@ public class OrderService {
         }
 
         paymentRepository.save(payment);
+        log.info("결제 정보 저장 완료");
+
         orderRepository.save(payment.getOrder());
+        log.info("주문 - 결제 상태 업데이트 완료");
+    }
+
+    /**
+     * 결제 및 주문 정보 저장
+     *
+     * @param order
+     * @param payment
+     */
+    public void saveFailureOrder(Order order, Payment payment) {
+        paymentRepository.save(payment);
+        orderRepository.save(order);
+        log.info("결제 실패 정보 저장 완료");
     }
 
     /**
@@ -256,10 +288,15 @@ public class OrderService {
         List<Order> orderList = StreamSupport.stream(orders.spliterator(), false)
                 .collect(Collectors.toList());
 
-        //Order to OrderResponseDto
-        ModelMapper modelMapper = new ModelMapper();
         return orderList.stream()
-                .map(order -> modelMapper.map(order, OrderResponseDto.class))
+                .map(order -> new OrderResponseDto(
+                        order.getOrderId(),
+                        order.getTotalPrice(),
+                        order.getTotalQuantity(),
+                        order.getStatus(),
+                        order.getCreatedAt(),
+                        order.getMemberId()
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -272,8 +309,15 @@ public class OrderService {
     public OrderResponseDto getOrderDetail(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
-        OrderResponseDto orderResponseDto = new ModelMapper().map(order, OrderResponseDto.class);
 
+        OrderResponseDto orderResponseDto = new OrderResponseDto(
+                order.getOrderId(),
+                order.getTotalPrice(),
+                order.getTotalQuantity(),
+                order.getStatus(),
+                order.getCreatedAt(),
+                order.getMemberId()
+        );
         return orderResponseDto;
     }
 

@@ -62,10 +62,10 @@ public class ProductController {
         return ResponseEntity.ok(productResponseDto);
     }
 
-    /* 재고 update (for feign client) */
+    /* 재고 수량 변경 */
     @PutMapping("/{productId}")
     public void updateStock(@PathVariable("productId") Long productId, @RequestParam("orderQuantity") int orderQuantity) {
-        log.info("updateStock 호출");
+        log.info("재고 수량 변경 호출");
         productService.updateStock(productId, orderQuantity);
     }
 }

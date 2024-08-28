@@ -12,7 +12,7 @@ import java.util.List;
 public interface OrderServiceClient {
 
     @GetMapping("/{memberId}/orders")
-    public List<OrderResponseDto> getOrdersByMemberId(@PathVariable("memberId") Long memberId);
+    public ResponseEntity<List<OrderResponseDto>> getOrdersByMemberId(@PathVariable("memberId") Long memberId);
 
     // ErrorfulController's endpoints
     @GetMapping("/errorful/case1")

@@ -47,4 +47,14 @@ public class Member extends Timestamped {
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private UserRoleEnum role;
+
+    public Member(String email, String password, String name, String phone, String address, String addressDetail, UserRoleEnum role) {
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.phone = phone;
+        this.address = address;
+        this.addressDetail = addressDetail;
+        this.role = role;
+    }
 }

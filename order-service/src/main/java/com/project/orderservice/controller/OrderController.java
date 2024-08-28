@@ -2,13 +2,15 @@ package com.project.orderservice.controller;
 
 import com.project.orderservice.dto.OrderRequestDto;
 import com.project.orderservice.dto.OrderResponseDto;
+import com.project.orderservice.entity.OrderStatusEnum;
+import com.project.orderservice.exception.CustomException;
+import com.project.orderservice.exception.ErrorCode;
 import com.project.orderservice.messageQueue.KafkaProducer;
 import com.project.orderservice.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -51,7 +53,18 @@ public class OrderController {
                                       @Valid @RequestBody OrderRequestDto orderRequestDto) {
 
         OrderResponseDto orderResponseDto = orderService.createOrder(memberId, orderRequestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
+
+        //결제 성공여부 분기 처리
+        if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
+            log.info("결제 성공");
+            return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
+        } else if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
+            //재고 rollback
+            log.info("결제 실패");
+            orderService.rollbackStock(orderRequestDto);
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
+        throw new CustomException(ErrorCode.ORDER_FAILED);
     }
 
     /* 사용자별 전체 주문 내역 조회 */
@@ -60,9 +73,7 @@ public class OrderController {
         Iterable<OrderResponseDto> orderList = orderService.getOrdersByMemberId(memberId);
 
         List<OrderResponseDto> result = new ArrayList<>();
-        orderList.forEach(v -> {
-            result.add(new ModelMapper().map(v, OrderResponseDto.class));
-        });
+        orderList.forEach(result::add);
 
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }

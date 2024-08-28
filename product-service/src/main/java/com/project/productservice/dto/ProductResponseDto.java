@@ -11,4 +11,11 @@ public class ProductResponseDto {
     private int unitPrice;
     private int stock;
     private String category;
+
+    public ProductResponseDto(String name, int unitPrice, int stock, String category) {
+        this.name = name;
+        this.unitPrice = unitPrice;
+        this.stock = stock;
+        this.category = category;
+    }
 }

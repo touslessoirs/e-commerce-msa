@@ -25,7 +25,7 @@ public class OrderProduct {
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @JoinColumn(name = "product_id")
+    @Column(name = "product_id")
     private Long productId;
 
     public OrderProduct(int unitPrice, int quantity, Order order, Long productId) {
