@@ -13,10 +13,17 @@ public class FeignErrorDecoder implements ErrorDecoder {
             case 400:
                 if (methodKey.contains("updateStock")) {
                     return new CustomException(ErrorCode.STOCK_INSUFFICIENT);
+                } else if (methodKey.contains("isProductPurchasable") || methodKey.contains("updateStock")) {
+                    return new CustomException(ErrorCode.STOCK_INSUFFICIENT);
                 }
                 return new ResponseStatusException(HttpStatus.BAD_REQUEST, "잘못된 요청입니다.");
+            case 403:
+                if (methodKey.contains("isProductPurchasable")) {
+                    return new CustomException(ErrorCode.PURCHASE_TIME_INVALID);
+                }
+                return new ResponseStatusException(HttpStatus.FORBIDDEN, "접근이 거부되었습니다.");
             case 404:
-                if(methodKey.contains("getProductDetail")) {
+                if (methodKey.contains("getProductDetail")) {
                     return new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
                 }
                 return new ResponseStatusException(HttpStatus.NOT_FOUND, "리소스를 찾을 수 없습니다.");

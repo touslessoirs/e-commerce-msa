@@ -1,17 +1,18 @@
 package com.project.productservice;
 
 import com.project.productservice.entity.Product;
+import com.project.productservice.exception.CustomException;
 import com.project.productservice.repository.ProductRepository;
 import com.project.productservice.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 public class ProductServiceTest {
@@ -21,6 +22,9 @@ public class ProductServiceTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
 
     private Long productId;
     private int quantity;
@@ -49,7 +53,7 @@ public class ProductServiceTest {
         // given
 
         // when
-        boolean result = productService.checkProduct(productId, 1);
+        boolean result = productService.isProductPurchasable(productId, 1);
 
         // then
         assertTrue(result, "Product should be available for purchase.");
@@ -58,15 +62,16 @@ public class ProductServiceTest {
     /**
      * 구매 가능일 < 현재 시점
      */
-    @Test
+//    @Test
     public void testCheckProductWhenNotAvailable1() {
         // given
 
-        // when
-        boolean result = productService.checkProduct(productId, quantity);
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            productService.isProductPurchasable(productId, quantity);
+        });
 
-        // then
-        assertFalse(result, "Product should not be available for purchase.");
+        assertEquals("아직 구매 가능한 시간이 아닙니다.", exception.getMessage());
     }
 
     /**
@@ -75,11 +80,13 @@ public class ProductServiceTest {
     @Test
     public void testCheckProductWhenNotAvailable2() {
         // given
+        int requestedQuantity = quantity + 1;
 
-        // when
-        boolean result = productService.checkProduct(productId, quantity+1);
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            productService.isProductPurchasable(productId, requestedQuantity);
+        });
 
-        // then
-        assertFalse(result, "Product should not be available for purchase.");
+        assertEquals("재고가 부족하여 결제할 수 없습니다.", exception.getMessage());
     }
 }

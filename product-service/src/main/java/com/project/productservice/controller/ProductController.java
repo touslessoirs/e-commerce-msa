@@ -61,9 +61,9 @@ public class ProductController {
 
     /* 재고 수량 & 구매 가능 시간 확인 */
     @GetMapping("/check-product/{productId}")
-    public boolean checkProduct(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
-        log.info("checkProduct 호출");
-        return productService.checkProduct(productId, quantity);
+    public boolean isProductPurchasable(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
+        log.info("isProductPurchasable 호출");
+        return productService.isProductPurchasable(productId, quantity);
     }
 
     /* 재고 수량 변경 */

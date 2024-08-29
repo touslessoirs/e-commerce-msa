@@ -96,14 +96,14 @@ public class OrderService {
     }
 
     /**
-     * 상품 확인 & 재고 감소
+     * 상품 구매 가능여부 확인 & 재고 감소
      *
      * @param orderRequestDto
      */
     @Transactional
     public synchronized void checkAndUpdateStock(OrderRequestDto orderRequestDto) {
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-            if(productServiceClient.checkProduct(orderProductDto.getProductId(), orderProductDto.getQuantity())){
+            if(productServiceClient.isProductPurchasable(orderProductDto.getProductId(), orderProductDto.getQuantity())){
                 productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity()*(-1));
             } else {
                 throw new CustomException(ErrorCode.ORDER_FAILED);

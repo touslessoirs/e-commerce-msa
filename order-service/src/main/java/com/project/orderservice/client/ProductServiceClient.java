@@ -18,5 +18,5 @@ public interface ProductServiceClient {
     public void updateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
 
     @GetMapping("/check-product/{productId}")
-    public boolean checkProduct(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
+    public boolean isProductPurchasable(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
 }
