@@ -34,7 +34,7 @@ public class ProductConcurrencyTest {
         Product product = new Product();
         product.setName("Test Product");
         product.setUnitPrice(1);
-        product.setStock(100);         // 초기 재고 10
+        product.setStock(100);         // 초기 재고
         product.setCategory("for test");
         product = productRepository.save(product);
 

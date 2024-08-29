@@ -15,6 +15,8 @@ public interface ProductServiceClient {
     public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable("productId") Long productId);
 
     @PutMapping("/{productId}")
-    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("orderQuantity") int orderQuantity);
+    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
 
+    @GetMapping("/check-product/{productId}")
+    public boolean checkProduct(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
 }

@@ -47,7 +47,7 @@ public class OrderController {
         return greeting;
     }
 
-    /* 상품 주문 */
+    /* 주문하기 */
     @PostMapping("/{memberId}/orders")
     public ResponseEntity<OrderResponseDto> createOrder(@PathVariable("memberId") Long memberId,
                                       @Valid @RequestBody OrderRequestDto orderRequestDto) {

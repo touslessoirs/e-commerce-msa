@@ -8,6 +8,7 @@ import com.project.orderservice.dto.ShippingRequestDto;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
+import com.project.orderservice.exception.FeignErrorDecoder;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
@@ -31,80 +32,20 @@ public class OrderService {
     private final ShippingRepository shippingRepository;
     private final PaymentRepository paymentRepository;
     private final ProductServiceClient productServiceClient;
-//    private final FeignErrorDecoder feignErrorDecoder;
+    private final FeignErrorDecoder feignErrorDecoder;
 
     public OrderService(OrderRepository orderRepository, OrderProductRepository orderProductRepository,
                         ShippingRepository shippingRepository, PaymentRepository paymentRepository,
-                        ProductServiceClient productServiceClient
-//                        FeignErrorDecoder feignErrorDecoder
+                        ProductServiceClient productServiceClient,
+                        FeignErrorDecoder feignErrorDecoder
     ) {
         this.orderRepository = orderRepository;
         this.orderProductRepository = orderProductRepository;
         this.shippingRepository = shippingRepository;
         this.paymentRepository = paymentRepository;
         this.productServiceClient = productServiceClient;
-//        this.feignErrorDecoder = feignErrorDecoder;
+        this.feignErrorDecoder = feignErrorDecoder;
     }
-
-//    @Transactional
-//    public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
-//        List<OrderProduct> orderProductList = new ArrayList<>();
-//        int totalQuantity = 0;
-//        int totalPrice = 0;
-//        Order order = new Order();
-//
-//        //상품 상세 페이지에서 주문한 경우
-//        log.info("상품 상세 페이지에서 주문 요청");
-//        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-//            Long productId = orderProductDto.getId();
-//
-//            //Product 통신 -> 상품 상세 조회
-//            ProductResponseDto product = productServiceClient.getProductDetail(productId);
-//
-//            int quantity = orderProductDto.getQuantity();
-//            int price = orderProductDto.getPrice() * quantity;  //해당 상품의 총 가격
-//
-//            //Product 통신 -> 재고 반영
-//            productServiceClient.updateStock(productId, quantity);
-//
-//            // 주문 상품 정보 생성
-//            OrderProduct orderProduct = new OrderProduct(price, quantity, order, productId);
-//            orderProductList.add(orderProduct);
-//
-//            totalQuantity += quantity;
-//            totalPrice += price;
-//        }
-//
-//        // 주문 정보 설정
-//        order.setMemberId(memberId);
-//        order.setTotalQuantity(totalQuantity);
-//        order.setTotalPrice(totalPrice);
-//
-//        // 주문 저장
-//        orderRepository.save(order);
-//        log.info("주문 정보 저장 완료");
-//
-//        orderProductRepository.saveAll(orderProductList);
-//        log.info("주문 상품 정보 저장 완료");
-//
-//        // 배송 정보 저장
-//        Shipping shipping = new Shipping();
-//        shipping.setAddress(orderRequestDto.getShipping().getAddress());
-//        shipping.setAddressDetail(orderRequestDto.getShipping().getAddressDetail());
-//        shipping.setPhone(orderRequestDto.getShipping().getPhone());
-//        shipping.setOrder(order);
-//        shippingRepository.save(shipping);
-//        log.info("배송 정보 저장 완료");
-//
-//        OrderResponseDto orderResponseDto = new OrderResponseDto();
-//        orderResponseDto.setOrderId(order.getOrderId());
-//        orderResponseDto.setTotalPrice(totalPrice);
-//        orderResponseDto.setTotalQuantity(totalQuantity);
-//        orderResponseDto.setStatus(order.getStatus());
-//        orderResponseDto.setMemberId(memberId);
-//
-//        return orderResponseDto;
-//    }
 
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
@@ -113,8 +54,8 @@ public class OrderService {
         Order order = null;
 
         try {
-            //재고 감소
-            updateStockForOrder(orderRequestDto);
+            //상품 확인 & 재고 감소
+            checkAndUpdateStock(orderRequestDto);
             //주문 정보 저장
             order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
 
@@ -136,7 +77,8 @@ public class OrderService {
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
-            throw new CustomException(ErrorCode.ORDER_FAILED, e);
+            throw e;
+//            throw new CustomException(ErrorCode.ORDER_FAILED, e);
         }
     }
 
@@ -154,14 +96,18 @@ public class OrderService {
     }
 
     /**
-     * 재고 감소
+     * 상품 확인 & 재고 감소
      *
      * @param orderRequestDto
      */
     @Transactional
-    public synchronized void updateStockForOrder(OrderRequestDto orderRequestDto) {
+    public synchronized void checkAndUpdateStock(OrderRequestDto orderRequestDto) {
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-            productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity()*(-1));
+            if(productServiceClient.checkProduct(orderProductDto.getProductId(), orderProductDto.getQuantity())){
+                productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity()*(-1));
+            } else {
+                throw new CustomException(ErrorCode.ORDER_FAILED);
+            }
         }
     }
 

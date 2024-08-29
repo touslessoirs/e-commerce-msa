@@ -59,10 +59,18 @@ public class ProductController {
         return ResponseEntity.ok(productResponseDto);
     }
 
+    /* 재고 수량 & 구매 가능 시간 확인 */
+    @GetMapping("/check-product/{productId}")
+    public boolean checkProduct(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
+        log.info("checkProduct 호출");
+        return productService.checkProduct(productId, quantity);
+    }
+
     /* 재고 수량 변경 */
     @PutMapping("/{productId}")
-    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("orderQuantity") int orderQuantity) {
-        log.info("재고 수량 변경 호출");
-        productService.updateStock(productId, orderQuantity);
+    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
+        log.info("updateStock 호출");
+        productService.updateStock(productId, quantity);
     }
+
 }
