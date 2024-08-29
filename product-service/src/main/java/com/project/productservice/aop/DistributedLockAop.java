@@ -51,7 +51,7 @@ public class DistributedLockAop {
             if (!available) {
                 return false;
             } else {
-                log.info("Redisson Lock Acquired: {}", key); // 락을 얻었을 때 key 값을 로그로 출력
+                log.info("Redisson Lock Acquired: {}", key); // 락을 얻었을 때 -> key 값 출력
                 return aopForTransaction.proceed(joinPoint);  // (3) 트랜잭션 처리
             }
         } catch (InterruptedException e) {

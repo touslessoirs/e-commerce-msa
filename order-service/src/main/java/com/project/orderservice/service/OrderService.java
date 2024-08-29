@@ -13,6 +13,7 @@ import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -130,45 +131,12 @@ public class OrderService {
             OrderResponseDto orderResponseDto = new OrderResponseDto(order);
             return orderResponseDto;
 
-//        } catch (DataIntegrityViolationException e) {
-//            throw e;
-//        } catch (CustomException e) {
-//            throw e;
+        } catch (DataIntegrityViolationException e) {
+            throw e;
+        } catch (CustomException e) {
+            throw e;
         } catch (Exception e) {
-            handleOrderFailure(orderRequestDto, order, e);
             throw new CustomException(ErrorCode.ORDER_FAILED, e);
-        }
-    }
-
-    /**
-     * 주문 실패 시 DB에 주문 정보는 commit, 재고 감소는 rollback
-     *
-     * @param orderRequestDto
-     */
-    public void handleOrderFailure(OrderRequestDto orderRequestDto, Order order, Exception e) {
-        // 1. 주문 rollback
-        if (order != null) {
-            rollbackOrder(order);
-        }
-
-        // 2. 재고 rollback
-        rollbackStock(orderRequestDto);
-
-        log.error("주문 처리 중 오류 발생: {}", e.getMessage(), e);
-    }
-
-
-    /**
-     * 주문 rollback
-     *
-     * @param order
-     */
-    @Transactional
-    public void rollbackOrder(Order order) {
-        if (order != null) {
-            order.setStatus(OrderStatusEnum.ORDER_FAILED);
-            orderRepository.save(order);
-            log.info("주문 롤백 완료: ORDER ID {}", order.getOrderId());
         }
     }
 
@@ -178,7 +146,7 @@ public class OrderService {
      * @param orderRequestDto
      */
     @Transactional
-    public void rollbackStock(OrderRequestDto orderRequestDto) {
+    public synchronized void rollbackStock(OrderRequestDto orderRequestDto) {
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
             productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
             log.info("재고 롤백 완료: PRODUCT ID {}", orderProductDto.getProductId());
@@ -191,7 +159,7 @@ public class OrderService {
      * @param orderRequestDto
      */
     @Transactional
-    public void updateStockForOrder(OrderRequestDto orderRequestDto) {
+    public synchronized void updateStockForOrder(OrderRequestDto orderRequestDto) {
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
             productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity()*(-1));
         }
@@ -295,17 +263,17 @@ public class OrderService {
         log.info(String.valueOf(payment.getOrder().getStatus()));
     }
 
-    /**
-     * 결제 및 주문 정보 저장
-     *
-     * @param order
-     * @param payment
-     */
-    public void saveFailureOrder(Order order, Payment payment) {
-        paymentRepository.save(payment);
-        orderRepository.save(order);
-        log.info("결제 실패 정보 저장 완료");
-    }
+//    /**
+//     * 결제 및 주문 정보 저장
+//     *
+//     * @param order
+//     * @param payment
+//     */
+//    public void saveFailureOrder(Order order, Payment payment) {
+//        paymentRepository.save(payment);
+//        orderRepository.save(order);
+//        log.info("결제 실패 정보 저장 완료");
+//    }
 
     /**
      * 사용자별 전체 주문 내역 조회

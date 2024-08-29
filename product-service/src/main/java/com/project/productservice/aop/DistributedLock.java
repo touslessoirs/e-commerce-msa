@@ -12,6 +12,6 @@ public @interface DistributedLock {
 
     String key();   //락의 이름
     TimeUnit timeUnit() default TimeUnit.SECONDS;   //락의 시간 단위
-    long waitTime() default 1L; //락을 획득하기 위해 시도하는 최대 대기 시간 (1s)
-    long leaseTime() default 3L;    //락을 획득한 후, 이 락이 자동으로 해제되기까지의 시간 (3s)
+    long waitTime() default 5L;     //락을 획득하기 위해 시도하는 최대 대기 시간 (1s)
+    long leaseTime() default 5L;    //락을 획득한 후, 이 락이 자동으로 해제되기까지의 시간 (5s)
 }
