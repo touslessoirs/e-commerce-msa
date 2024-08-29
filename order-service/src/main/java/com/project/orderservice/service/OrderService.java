@@ -8,13 +8,11 @@ import com.project.orderservice.dto.ShippingRequestDto;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
-import com.project.orderservice.exception.FeignErrorDecoder;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,19 +30,19 @@ public class OrderService {
     private final ShippingRepository shippingRepository;
     private final PaymentRepository paymentRepository;
     private final ProductServiceClient productServiceClient;
-    private final FeignErrorDecoder feignErrorDecoder;
+//    private final FeignErrorDecoder feignErrorDecoder;
 
     public OrderService(OrderRepository orderRepository, OrderProductRepository orderProductRepository,
                         ShippingRepository shippingRepository, PaymentRepository paymentRepository,
-                        ProductServiceClient productServiceClient,
-                        FeignErrorDecoder feignErrorDecoder
+                        ProductServiceClient productServiceClient
+//                        FeignErrorDecoder feignErrorDecoder
     ) {
         this.orderRepository = orderRepository;
         this.orderProductRepository = orderProductRepository;
         this.shippingRepository = shippingRepository;
         this.paymentRepository = paymentRepository;
         this.productServiceClient = productServiceClient;
-        this.feignErrorDecoder = feignErrorDecoder;
+//        this.feignErrorDecoder = feignErrorDecoder;
     }
 
 //    @Transactional
@@ -114,6 +112,8 @@ public class OrderService {
         Order order = null;
 
         try {
+            //재고 감소
+            updateStockForOrder(orderRequestDto);
             //주문 정보 저장
             order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
 
@@ -121,21 +121,21 @@ public class OrderService {
             Payment payment = createPayment(order); //PAYMENT_PENDING
             savePayment(payment);    //PAYMENT_FAILED or PAYMENT_COMPLETED
 
-            //결제 성공여부 분기 처리
+            //결제 성공 시 배송 정보 저장
             if (payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
-                //성공 -> 배송 정보 저장
                 saveShipping(order, orderRequestDto.getShipping());
             }
 
-            //return OrderResponseDto
+            //주문 응답 생성 및 반환
             OrderResponseDto orderResponseDto = new OrderResponseDto(order);
             return orderResponseDto;
 
-        } catch (DataIntegrityViolationException e) {
-            throw e;
-        } catch (CustomException e) {
-            throw e;
+//        } catch (DataIntegrityViolationException e) {
+//            throw e;
+//        } catch (CustomException e) {
+//            throw e;
         } catch (Exception e) {
+            handleOrderFailure(orderRequestDto, order, e);
             throw new CustomException(ErrorCode.ORDER_FAILED, e);
         }
     }
@@ -145,10 +145,55 @@ public class OrderService {
      *
      * @param orderRequestDto
      */
+    public void handleOrderFailure(OrderRequestDto orderRequestDto, Order order, Exception e) {
+        // 1. 주문 rollback
+        if (order != null) {
+            rollbackOrder(order);
+        }
+
+        // 2. 재고 rollback
+        rollbackStock(orderRequestDto);
+
+        log.error("주문 처리 중 오류 발생: {}", e.getMessage(), e);
+    }
+
+
+    /**
+     * 주문 rollback
+     *
+     * @param order
+     */
+    @Transactional
+    public void rollbackOrder(Order order) {
+        if (order != null) {
+            order.setStatus(OrderStatusEnum.ORDER_FAILED);
+            orderRepository.save(order);
+            log.info("주문 롤백 완료: ORDER ID {}", order.getOrderId());
+        }
+    }
+
+    /**
+     * 재고 rollback
+     *
+     * @param orderRequestDto
+     */
+    @Transactional
     public void rollbackStock(OrderRequestDto orderRequestDto) {
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-            // Product 통신 -> 재고 복구
             productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
+            log.info("재고 롤백 완료: PRODUCT ID {}", orderProductDto.getProductId());
+        }
+    }
+
+    /**
+     * 재고 감소
+     *
+     * @param orderRequestDto
+     */
+    @Transactional
+    public void updateStockForOrder(OrderRequestDto orderRequestDto) {
+        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
+            productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity()*(-1));
         }
     }
 
@@ -159,6 +204,7 @@ public class OrderService {
      * @param orderRequestDto
      * @return
      */
+    @Transactional
     public Order saveOrder(Long memberId, OrderRequestDto orderRequestDto) {
         List<OrderProduct> orderProductList = new ArrayList<>();
         int totalQuantity = 0;
@@ -168,15 +214,9 @@ public class OrderService {
 
         for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
             Long productId = orderProductDto.getProductId();
-            log.info("productId : {}", productId);
             int quantity = orderProductDto.getQuantity();
             int unitPrice = orderProductDto.getUnitPrice();
 
-            //Product 통신 -> 재고 감소
-            log.info("updateStock feign client 호출");
-            productServiceClient.updateStock(productId, orderProductDto.getQuantity()*(-1));
-
-            // 주문 상품 정보 생성
             OrderProduct orderProduct= new OrderProduct(unitPrice, quantity, order, productId);
             orderProductList.add(orderProduct);
 
@@ -250,10 +290,9 @@ public class OrderService {
         }
 
         paymentRepository.save(payment);
-        log.info("결제 정보 저장 완료");
-
         orderRepository.save(payment.getOrder());
-        log.info("주문 - 결제 상태 업데이트 완료");
+        log.info("결제 정보 저장 완료");
+        log.info(String.valueOf(payment.getOrder().getStatus()));
     }
 
     /**

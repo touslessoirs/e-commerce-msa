@@ -12,6 +12,7 @@ public enum OrderStatusEnum {
     RETURN_REQUESTED("반품 신청"),
     RETURN_COMPLETED("반품 완료"),
 
+    ORDER_FAILED("주문 실패"),
     ORDER_CONFIRMED("주문 확정");
 
     private final String description;

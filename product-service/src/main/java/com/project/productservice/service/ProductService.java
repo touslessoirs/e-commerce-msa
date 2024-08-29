@@ -107,7 +107,7 @@ public class ProductService {
 //    }
 
     /* Distributed Lock */
-    @DistributedLock(key = "'PRODUCTID-' + #productId")
+    @DistributedLock(key = "'PRODUCTID-' + #productId + '-' + T(java.util.UUID).randomUUID().toString()")
     public void updateStock(Long productId, int orderQuantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
