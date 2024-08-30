@@ -48,22 +48,38 @@ public class OrderController {
     }
 
     /* 주문하기 */
+//    @PostMapping("/{memberId}/orders")
+//    public ResponseEntity<OrderResponseDto> createOrder(@PathVariable("memberId") Long memberId,
+//                                      @Valid @RequestBody OrderRequestDto orderRequestDto) {
+//
+//        OrderResponseDto orderResponseDto = orderService.createOrder(memberId, orderRequestDto);
+//
+//        //결제 성공여부 분기 처리
+//        if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
+//            log.info("결제 성공");
+//            return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
+//        } else if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
+//            //재고 rollback
+//            log.info("결제 실패");
+//            orderService.rollbackStock(orderRequestDto);
+//            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+//        }
+//        throw new CustomException(ErrorCode.ORDER_FAILED);
+//    }
     @PostMapping("/{memberId}/orders")
     public ResponseEntity<OrderResponseDto> createOrder(@PathVariable("memberId") Long memberId,
                                       @Valid @RequestBody OrderRequestDto orderRequestDto) {
 
         OrderResponseDto orderResponseDto = orderService.createOrder(memberId, orderRequestDto);
 
-        //결제 성공여부 분기 처리
         if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
             log.info("결제 성공");
             return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
         } else if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
-            //재고 rollback
             log.info("결제 실패");
-            orderService.rollbackStock(orderRequestDto);
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
         }
+        log.info("주문 실패");
         throw new CustomException(ErrorCode.ORDER_FAILED);
     }
 

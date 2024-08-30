@@ -14,7 +14,6 @@ import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,68 +46,101 @@ public class OrderService {
         this.feignErrorDecoder = feignErrorDecoder;
     }
 
+//    @Transactional
+//    public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
+//        log.info("상품 페이지에서 주문 요청");
+//
+//        Order order = null;
+//
+//        try {
+//            //주문 정보 저장
+//            order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
+//
+//            //결제 처리 및 결제 정보 저장
+//            Payment payment = createPayment(order); //PAYMENT_PENDING
+//            savePayment(payment);    //PAYMENT_FAILED or PAYMENT_COMPLETED
+//
+//            //결제 성공 시 배송 정보 저장
+//            if (payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
+//                saveShipping(order, orderRequestDto.getShipping());
+//            }
+//
+//            //상품 확인 & 재고 감소
+//            checkAndUpdateStock(orderRequestDto);
+//
+//            //주문 응답 생성 및 반환
+//            OrderResponseDto orderResponseDto = new OrderResponseDto(order);
+//            return orderResponseDto;
+//
+//        } catch (DataIntegrityViolationException e) {
+//            throw e;
+//        } catch (CustomException e) {
+//            throw e;
+//        } catch (Exception e) {
+//            throw e;
+//        }
+//    }
+
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
-        log.info("상품 페이지에서 주문 요청");
+        // 모든 주문 제품에 대해 -> 구매 가능 여부, 재고 확인
+        for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
+            boolean isAvailable = productServiceClient.isProductAvailable(orderProduct.getProductId()).getBody();
 
-        Order order = null;
-
-        try {
-            //상품 확인 & 재고 감소
-            checkAndUpdateStock(orderRequestDto);
-            //주문 정보 저장
-            order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
-
-            //결제 처리 및 결제 정보 저장
-            Payment payment = createPayment(order); //PAYMENT_PENDING
-            savePayment(payment);    //PAYMENT_FAILED or PAYMENT_COMPLETED
-
-            //결제 성공 시 배송 정보 저장
-            if (payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
-                saveShipping(order, orderRequestDto.getShipping());
+            if (!isAvailable) {
+                throw new CustomException(ErrorCode.PURCHASE_TIME_INVALID);
             }
 
-            //주문 응답 생성 및 반환
-            OrderResponseDto orderResponseDto = new OrderResponseDto(order);
-            return orderResponseDto;
+            boolean isStockAvailable = productServiceClient.checkAndUpdateStock(orderProduct.getProductId(), orderProduct.getQuantity()).getBody();
 
-        } catch (DataIntegrityViolationException e) {
-            throw e;
-        } catch (CustomException e) {
-            throw e;
-        } catch (Exception e) {
-            throw e;
-//            throw new CustomException(ErrorCode.ORDER_FAILED, e);
+            if (!isStockAvailable) {
+                throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
+            }
         }
+
+        // 주문 정보 저장
+        Order order = saveOrder(memberId, orderRequestDto);
+        // 결제 처리 및 결제 정보 저장
+        boolean paymentSuccessful = processPayment(order);
+
+        OrderResponseDto orderResponseDto = new OrderResponseDto(order);
+
+        if (paymentSuccessful) {
+            // 2-1. 결제 성공 처리
+            // 배송 정보 저장
+            saveShipping(order, orderRequestDto.getShipping());
+
+            // DB에 재고 동기화
+//            for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
+//                productServiceClient.updateStock(orderProduct.getProductId(), orderProduct.getQuantity(), true);
+//            }
+
+        } else {
+            // 2-2. 결제 실패 처리
+            // Redis 재고 롤백 처리
+            for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
+                productServiceClient.updateStock(orderProduct.getProductId(), orderProduct.getQuantity(), false);
+            }
+        }
+
+        return orderResponseDto;
     }
 
     /**
-     * 재고 rollback
+     * 결제 정보 생성 및 결제 처리
      *
-     * @param orderRequestDto
+     * @param order
+     * @return
      */
-    @Transactional
-    public synchronized void rollbackStock(OrderRequestDto orderRequestDto) {
-        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-            productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
-            log.info("재고 롤백 완료: PRODUCT ID {}", orderProductDto.getProductId());
-        }
-    }
+    private boolean processPayment(Order order) {
+        // 1. 주문 정보로 결제 정보 생성
+        Payment payment = createPayment(order);
 
-    /**
-     * 상품 구매 가능여부 확인 & 재고 감소
-     *
-     * @param orderRequestDto
-     */
-    @Transactional
-    public synchronized void checkAndUpdateStock(OrderRequestDto orderRequestDto) {
-        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-            if(productServiceClient.isProductPurchasable(orderProductDto.getProductId(), orderProductDto.getQuantity())){
-                productServiceClient.updateStock(orderProductDto.getProductId(), orderProductDto.getQuantity()*(-1));
-            } else {
-                throw new CustomException(ErrorCode.ORDER_FAILED);
-            }
-        }
+        // 2. 결제 처리 및 결제 정보 저장
+        savePayment(payment);
+
+        // 3. 결제 성공 여부 반환
+        return payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED;
     }
 
     /**
@@ -131,7 +163,7 @@ public class OrderService {
             int quantity = orderProductDto.getQuantity();
             int unitPrice = orderProductDto.getUnitPrice();
 
-            OrderProduct orderProduct= new OrderProduct(unitPrice, quantity, order, productId);
+            OrderProduct orderProduct = new OrderProduct(unitPrice, quantity, order, productId);
             orderProductList.add(orderProduct);
 
             totalQuantity += orderProductDto.getQuantity();
@@ -159,6 +191,7 @@ public class OrderService {
      * @param order
      * @param shippingRequestDto
      */
+    @Transactional
     public void saveShipping(Order order, ShippingRequestDto shippingRequestDto) {
         Shipping shipping = new Shipping();
         shipping.setAddress(shippingRequestDto.getAddress());
@@ -176,6 +209,7 @@ public class OrderService {
      * @param order
      * @return Payment
      */
+    @Transactional
     public Payment createPayment(Order order) {
         Payment payment = new Payment();
         payment.setOrder(order);
@@ -192,6 +226,7 @@ public class OrderService {
      * @param payment
      * @return
      */
+    @Transactional
     public void savePayment(Payment payment) {
         // PAYMENT_PENDING -> PAYMENT_COMPLETED 과정에서 이탈
         // ex) 잔액 부족으로 인한 결제 실패
@@ -209,17 +244,32 @@ public class OrderService {
         log.info(String.valueOf(payment.getOrder().getStatus()));
     }
 
-//    /**
-//     * 결제 및 주문 정보 저장
-//     *
-//     * @param order
-//     * @param payment
-//     */
-//    public void saveFailureOrder(Order order, Payment payment) {
-//        paymentRepository.save(payment);
-//        orderRepository.save(order);
-//        log.info("결제 실패 정보 저장 완료");
+    /**
+     * 재고 rollback
+     *
+     * @param orderRequestDto
+     */
+//    @Transactional
+//    public synchronized void rollbackStock(OrderRequestDto orderRequestDto) {
+//        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
+//            productServiceClient.rollbackStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
+//            log.info("재고 롤백 완료: PRODUCT ID {}", orderProductDto.getProductId());
+//        }
 //    }
+
+    /**
+     * 상품 구매 가능여부 확인 & 재고 감소
+     *
+     * @param orderRequestDto
+     */
+//    @Transactional
+//    public synchronized void checkAndUpdateStock(OrderRequestDto orderRequestDto) {
+//        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
+//            productServiceClient.checkAndUpdateStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
+//        }
+//    }
+
+
 
     /**
      * 사용자별 전체 주문 내역 조회

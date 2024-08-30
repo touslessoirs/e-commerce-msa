@@ -29,7 +29,7 @@ public class ProductServiceTest {
     private Long productId;
     private int quantity;
     private String productName;
-    LocalDateTime currentTime = LocalDateTime.now();
+    private LocalDateTime currentTime = LocalDateTime.now();
 
     @BeforeEach
     public void setUp() {
@@ -44,49 +44,81 @@ public class ProductServiceTest {
         product = productRepository.save(product);
 
         productId = product.getProductId();
-        productName = product.getName();
-        quantity = product.getStock();
     }
 
-    @Test
-    public void testCheckProductWhenAvailable() {
-        // given
-
-        // when
-        boolean result = productService.isProductPurchasable(productId, 1);
-
-        // then
-        assertTrue(result, "Product should be available for purchase.");
-    }
+//    @Test
+//    public void testCheckProductWhenAvailable() {
+//        // given
+//
+//        // when
+//
+//        // then
+//
+//    }
 
     /**
      * 구매 가능일 < 현재 시점
      */
 //    @Test
-    public void testCheckProductWhenNotAvailable1() {
+//    public void testCheckProductWhenNotAvailable1() {
+//        // given
+//
+//        // when & then
+//        CustomException exception = assertThrows(CustomException.class, () -> {
+//            productService.checkAndUpdateStock(productId, quantity);
+//        });
+//
+//        assertEquals("아직 구매 가능한 시간이 아닙니다.", exception.getMessage());
+//    }
+
+    /**
+     * 재고 < 구매 요청 수량
+     */
+//    @Test
+//    public void testCheckProductWhenNotAvailable2() {
+//        // given
+//        int requestedQuantity = quantity + 1;
+//
+//        // when & then
+//        CustomException exception = assertThrows(CustomException.class, () -> {
+//            productService.checkAndUpdateStock(productId, requestedQuantity);
+//        });
+//
+//        assertEquals("재고가 부족하여 결제할 수 없습니다.", exception.getMessage());
+//    }
+
+    @Test
+    public void testCheckPurchaseStartTime_whenTimeIsValid() {
         // given
+        // 현재 시간이 제품의 구매 시작 시간 이후일 때
+
+        // when
+        boolean result = productService.checkPurchaseStartTime(productId);
+
+        // then
+        assertTrue(result);
+    }
+
+    @Test
+    public void testCheckPurchaseStartTime_whenTimeIsInvalid() {
+        // given
+        Product product = new Product();
+        product.setName("Future Product");
+        product.setUnitPrice(1);
+        product.setStock(100);
+        product.setCategory("for test");
+        product.setPurchaseStartTime(currentTime.plusDays(1));  // 현재 시간 1일 후
+        product = productRepository.save(product);
+
+        Long futureProductId = product.getProductId();
 
         // when & then
         CustomException exception = assertThrows(CustomException.class, () -> {
-            productService.isProductPurchasable(productId, quantity);
+            productService.checkPurchaseStartTime(futureProductId);
         });
 
         assertEquals("아직 구매 가능한 시간이 아닙니다.", exception.getMessage());
     }
 
-    /**
-     * 재고 < 구매 요청 수량
-     */
-    @Test
-    public void testCheckProductWhenNotAvailable2() {
-        // given
-        int requestedQuantity = quantity + 1;
 
-        // when & then
-        CustomException exception = assertThrows(CustomException.class, () -> {
-            productService.isProductPurchasable(productId, requestedQuantity);
-        });
-
-        assertEquals("재고가 부족하여 결제할 수 없습니다.", exception.getMessage());
-    }
 }

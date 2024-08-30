@@ -18,7 +18,3 @@ public class OrderRequestDto {
     @NotNull
     private boolean fromCart = false;    //장바구니 분기 처리
 }
-
-
-
-

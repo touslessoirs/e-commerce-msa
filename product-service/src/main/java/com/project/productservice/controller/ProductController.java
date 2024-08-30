@@ -60,17 +60,47 @@ public class ProductController {
     }
 
     /* 재고 수량 & 구매 가능 시간 확인 */
-    @GetMapping("/check-product/{productId}")
-    public boolean isProductPurchasable(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
-        log.info("isProductPurchasable 호출");
-        return productService.isProductPurchasable(productId, quantity);
+//    @GetMapping("/check-product/{productId}")
+//    public boolean isProductPurchasable(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
+//        log.info("isProductPurchasable 호출");
+//        return productService.isProductPurchasable(productId, quantity);
+//    }
+
+//    /* 재고 수량 변경 */
+//    @PutMapping("/{productId}")
+//    public void rollbackStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
+//        log.info("rollbackStock 호출");
+//        productService.rollbackStock(productId, quantity);
+//    }
+
+    /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
+//    @GetMapping("/check-product/{productId}")
+//    public void checkAndUpdateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
+//        log.info("checkAndUpdateStock 호출");
+//        productService.checkAndUpdateStock(productId, quantity);
+//    }
+
+    /* 구매 가능 시간 확인 */
+    @GetMapping("/check-availability")
+    public ResponseEntity<Boolean> isProductAvailable(@RequestParam Long productId) {
+        boolean isAvailable = productService.isProductAvailable(productId);
+        return ResponseEntity.ok(isAvailable);
     }
 
-    /* 재고 수량 변경 */
-    @PutMapping("/{productId}")
-    public void updateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
-        log.info("updateStock 호출");
-        productService.updateStock(productId, quantity);
+    /* 재고 수량 확인 & 재고 감소 */
+    @PostMapping("/check-and-update-stock")
+    public ResponseEntity<Boolean> checkAndUpdateStock(@RequestParam Long productId, @RequestParam int quantity) {
+        boolean isStockUpdated = productService.checkAndUpdateStock(productId, quantity);
+        return ResponseEntity.ok(isStockUpdated);
+    }
+
+    /* 주문 시 성패여부 분기처리 */
+    @PostMapping("/update-stock")
+    public ResponseEntity<Void> updateStock(@RequestParam Long productId,
+                                            @RequestParam int quantity,
+                                            @RequestParam boolean success) {
+        productService.updateStock(productId, quantity, success);
+        return ResponseEntity.ok().build();
     }
 
 }

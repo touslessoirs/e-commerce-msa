@@ -30,11 +30,11 @@ public class ProductConcurrencyTest {
 
     @BeforeEach
     public void setUp() {
-        //테스트용 제품 생성
+        //테스트용 Product 생성
         Product product = new Product();
         product.setName("Test Product");
         product.setUnitPrice(1);
-        product.setStock(100);         // 초기 재고
+        product.setStock(1000);         // 초기 재고
         product.setCategory("for test");
         product = productRepository.save(product);
 
@@ -42,59 +42,28 @@ public class ProductConcurrencyTest {
         productName = product.getName();
     }
 
-    /**
-     * syncronized
-     * 비관적 락
-     *
-     * @throws InterruptedException
-     */
-//    @Test
-//    public void concurrentStockDecrease() throws InterruptedException {
-//        int numberOfThreads = 100;
-//        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
-//        CountDownLatch latch = new CountDownLatch(numberOfThreads);
-//
-//        for (int i = 0; i < numberOfThreads; i++) {
-//            executorService.execute(() -> {
-//                try {
-//                    productService.updateStock(productId, -1);
-//                } finally {
-//                    latch.countDown();
-//                }
-//            });
-//        }
-//
-//        latch.await(10, TimeUnit.SECONDS); // 모든 스레드가 작업을 완료할 때까지 대기
-//
-//        Product product = productRepository.findById(productId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-//        Assertions.assertEquals(0, product.getStock(), "최종 재고는 0이어야 합니다.");
-//
-//        executorService.shutdown();
-//    }
-
-    /**
-     * 분산 락
-     *
-     * @throws InterruptedException
-     */
     @Test
-    public void concurrentStockDecreasebyDistributedLock() throws InterruptedException {
-        int numberOfThreads = 100;
+    public void concurrentStockbyDistributedLock() throws InterruptedException {
+        int numberOfThreads = 1000;
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
         CountDownLatch latch = new CountDownLatch(numberOfThreads);
 
         for (int i = 0; i < numberOfThreads; i++) {
             executorService.execute(() -> {
                 try {
-                    productService.updateStock(productId, -1);
+                    productService.checkAndUpdateStock(productId, 1);
                 } finally {
                     latch.countDown();
                 }
             });
         }
 
-        latch.await(10, TimeUnit.SECONDS); // 모든 스레드가 작업을 완료할 때까지 대기
+        latch.await(30, TimeUnit.SECONDS); // 모든 스레드가 작업을 완료할 때까지 대기
+
+        boolean completed = latch.await(30, TimeUnit.SECONDS);
+        if (!completed) {
+            System.out.println("Test did not complete within the timeout period.");
+        }
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));

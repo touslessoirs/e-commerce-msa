@@ -9,12 +9,13 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER-001", "주문을 찾을 수 없습니다."),
     ORDER_FAILED(HttpStatus.BAD_REQUEST, "ORDER-002", "주문에 실패했습니다."),
-    STOCK_INSUFFICIENT(HttpStatus.BAD_REQUEST, "ORDER-003", "재고가 부족하여 결제할 수 없습니다."),
-    PURCHASE_TIME_INVALID(HttpStatus.FORBIDDEN, "ORDER-004", "아직 구매 가능한 시간이 아닙니다."),
 
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT-001", "결제에 실패했습니다."),
 
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT-001", "상품을 찾을 수 없습니다."),
+    OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "PRODUCT-002", "상품의 재고가 부족합니다."),
+    PURCHASE_TIME_INVALID(HttpStatus.FORBIDDEN, "PRODUCT-003", "현재 구매가 불가능한 상품이 포함되어 있습니다."),
+    STOCK_INSUFFICIENT(HttpStatus.BAD_REQUEST, "PRODUCT-004", "재고가 부족하여 결제할 수 없는 상품이 포함되어 있습니다."),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "회원을 찾을 수 없습니다."),
 

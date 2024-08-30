@@ -58,7 +58,9 @@ public class DistributedLockAop {
             throw new InterruptedException();
         } finally {
             try {
-                rLock.unlock();   // (4) 종료시 락 해제
+                if (rLock.isHeldByCurrentThread()) {  // 현재 스레드가 락을 소유하고 있는지 확인
+                    rLock.unlock();   // (4) 락 해제
+                }
             } catch (IllegalMonitorStateException e) {
                 log.info("Redisson Lock Already UnLock {} {}",
                         kv("serviceName", method.getName()),
