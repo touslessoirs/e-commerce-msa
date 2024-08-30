@@ -13,9 +13,8 @@ public enum ErrorCode {
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT-001", "결제에 실패했습니다."),
 
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT-001", "상품을 찾을 수 없습니다."),
-    OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "PRODUCT-002", "상품의 재고가 부족합니다."),
-    PURCHASE_TIME_INVALID(HttpStatus.FORBIDDEN, "PRODUCT-003", "현재 구매가 불가능한 상품이 포함되어 있습니다."),
-    STOCK_INSUFFICIENT(HttpStatus.BAD_REQUEST, "PRODUCT-004", "재고가 부족하여 결제할 수 없는 상품이 포함되어 있습니다."),
+    PURCHASE_TIME_INVALID(HttpStatus.FORBIDDEN, "PRODUCT-002", "현재 구매가 불가능한 상품이 포함되어 있습니다."),
+    STOCK_INSUFFICIENT(HttpStatus.BAD_REQUEST, "PRODUCT-003", "재고가 부족하여 결제할 수 없는 상품이 포함되어 있습니다."),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "회원을 찾을 수 없습니다."),
 

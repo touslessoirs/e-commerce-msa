@@ -1,40 +1,34 @@
 package com.project.orderservice.client;
 
-import com.project.orderservice.dto.ProductResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "product-service")
 public interface ProductServiceClient {
 
-    @GetMapping("/{productId}")
-    public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable("productId") Long productId);
+    /* 상품 상세 조회 */
+//    @GetMapping("/{productId}")
+//    public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable("productId") Long productId);
 
-    @PutMapping("/{productId}")
-    public void rollbackStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
+    /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
+    @PostMapping("/check-product")
+    public ResponseEntity<Boolean> processPurchase(@RequestParam Long productId, @RequestParam int quantity);
 
-//    @GetMapping("/check-product/{productId}")
-//    public boolean isProductPurchasable(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
+//    /* 구매 가능 시간 확인 */
+//    @GetMapping("/check-purchase-time")
+//    public ResponseEntity<Boolean> isProductPurchasable(@RequestParam Long productId);
+//
+//    /* 재고 수량 확인 & 재고 감소 */
+//    @PostMapping("/check-and-update-stock")
+//    public ResponseEntity<Boolean> checkAndUpdateStock(@RequestParam Long productId, @RequestParam int quantity);
 
-//    @GetMapping("/check-product/{productId}")
-//    public void checkAndUpdateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity);
+    /* 주문 실패 시 롤백 */
+    @PostMapping("/rollback-stock")
+    public ResponseEntity<Void> rollbackStock(@RequestParam Long productId, @RequestParam int quantity);
 
 
-
-    /* 구매 가능 시간 확인 */
-    @GetMapping("/check-availability")
-    public ResponseEntity<Boolean> isProductAvailable(@RequestParam Long productId);
-
-    /* 재고 수량 확인 & 재고 감소 */
-    @PostMapping("/check-and-update-stock")
-    public ResponseEntity<Boolean> checkAndUpdateStock(@RequestParam Long productId, @RequestParam int quantity);
-
-    /* 주문 시 성패여부 분기처리 */
-    @PostMapping("/update-stock")
-    public ResponseEntity<Void> updateStock(@RequestParam Long productId,
-                                            @RequestParam int quantity,
-                                            @RequestParam boolean success);
 
 
 

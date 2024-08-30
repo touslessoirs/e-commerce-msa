@@ -15,6 +15,7 @@ import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -46,101 +47,37 @@ public class OrderService {
         this.feignErrorDecoder = feignErrorDecoder;
     }
 
-//    @Transactional
-//    public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
-//        log.info("상품 페이지에서 주문 요청");
-//
-//        Order order = null;
-//
-//        try {
-//            //주문 정보 저장
-//            order = saveOrder(memberId, orderRequestDto); //PAYMENT_PENDING
-//
-//            //결제 처리 및 결제 정보 저장
-//            Payment payment = createPayment(order); //PAYMENT_PENDING
-//            savePayment(payment);    //PAYMENT_FAILED or PAYMENT_COMPLETED
-//
-//            //결제 성공 시 배송 정보 저장
-//            if (payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
-//                saveShipping(order, orderRequestDto.getShipping());
-//            }
-//
-//            //상품 확인 & 재고 감소
-//            checkAndUpdateStock(orderRequestDto);
-//
-//            //주문 응답 생성 및 반환
-//            OrderResponseDto orderResponseDto = new OrderResponseDto(order);
-//            return orderResponseDto;
-//
-//        } catch (DataIntegrityViolationException e) {
-//            throw e;
-//        } catch (CustomException e) {
-//            throw e;
-//        } catch (Exception e) {
-//            throw e;
-//        }
-//    }
-
-    @Transactional
-    public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
-        // 모든 주문 제품에 대해 -> 구매 가능 여부, 재고 확인
-        for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
-            boolean isAvailable = productServiceClient.isProductAvailable(orderProduct.getProductId()).getBody();
-
-            if (!isAvailable) {
-                throw new CustomException(ErrorCode.PURCHASE_TIME_INVALID);
-            }
-
-            boolean isStockAvailable = productServiceClient.checkAndUpdateStock(orderProduct.getProductId(), orderProduct.getQuantity()).getBody();
-
-            if (!isStockAvailable) {
-                throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
-            }
-        }
-
-        // 주문 정보 저장
-        Order order = saveOrder(memberId, orderRequestDto);
-        // 결제 처리 및 결제 정보 저장
-        boolean paymentSuccessful = processPayment(order);
-
-        OrderResponseDto orderResponseDto = new OrderResponseDto(order);
-
-        if (paymentSuccessful) {
-            // 2-1. 결제 성공 처리
-            // 배송 정보 저장
-            saveShipping(order, orderRequestDto.getShipping());
-
-            // DB에 재고 동기화
-//            for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
-//                productServiceClient.updateStock(orderProduct.getProductId(), orderProduct.getQuantity(), true);
-//            }
-
-        } else {
-            // 2-2. 결제 실패 처리
-            // Redis 재고 롤백 처리
-            for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
-                productServiceClient.updateStock(orderProduct.getProductId(), orderProduct.getQuantity(), false);
-            }
-        }
-
-        return orderResponseDto;
-    }
-
     /**
-     * 결제 정보 생성 및 결제 처리
-     *
-     * @param order
+     * 주문하기
+     * 
+     * @param memberId
+     * @param orderRequestDto
      * @return
      */
-    private boolean processPayment(Order order) {
-        // 1. 주문 정보로 결제 정보 생성
-        Payment payment = createPayment(order);
+    @Transactional
+    public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
+        // 1. 구매 가능 시간 & 재고 확인 + 재고 감소
+        for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
+            boolean isAvailable = productServiceClient.processPurchase(orderProduct.getProductId(), orderProduct.getQuantity()).getBody();
 
-        // 2. 결제 처리 및 결제 정보 저장
-        savePayment(payment);
+            if (!isAvailable) {
+                throw new CustomException(ErrorCode.ORDER_FAILED);
+            }
+        }
 
-        // 3. 결제 성공 여부 반환
-        return payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED;
+        // 2. 주문 정보 저장
+        Order order = saveOrder(memberId, orderRequestDto);
+
+        // 3. 결제 처리 및 결제 정보 저장
+        boolean paymentSuccessful = processPayment(order);
+
+        if (paymentSuccessful) {
+            // 4. 결제 성공 -> 배송 정보 저장
+            saveShipping(order, orderRequestDto.getShipping());
+        }
+
+        OrderResponseDto orderResponseDto = new OrderResponseDto(order);
+        return orderResponseDto;
     }
 
     /**
@@ -186,21 +123,20 @@ public class OrderService {
     }
 
     /**
-     * 배송 정보 저장
+     * 결제하기
      *
      * @param order
-     * @param shippingRequestDto
+     * @return
      */
-    @Transactional
-    public void saveShipping(Order order, ShippingRequestDto shippingRequestDto) {
-        Shipping shipping = new Shipping();
-        shipping.setAddress(shippingRequestDto.getAddress());
-        shipping.setAddressDetail(shippingRequestDto.getAddressDetail());
-        shipping.setPhone(shippingRequestDto.getPhone());
-        shipping.setOrder(order);
+    private boolean processPayment(Order order) {
+        // 1. 주문 정보를 바탕으로 결제 정보 생성
+        Payment payment = createPayment(order);
 
-        shippingRepository.save(shipping);
-        log.info("배송 정보 저장 완료");
+        // 2. 결제 처리 및 결제 정보 저장
+        savePayment(payment);
+
+        // 3. 결제 성공 여부 반환
+        return payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED;
     }
 
     /**
@@ -209,7 +145,6 @@ public class OrderService {
      * @param order
      * @return Payment
      */
-    @Transactional
     public Payment createPayment(Order order) {
         Payment payment = new Payment();
         payment.setOrder(order);
@@ -245,31 +180,34 @@ public class OrderService {
     }
 
     /**
-     * 재고 rollback
+     * 결제 실패 -> 재고 rollback
      *
-     * @param orderRequestDto
+     * @param orderProducts
      */
-//    @Transactional
-//    public synchronized void rollbackStock(OrderRequestDto orderRequestDto) {
-//        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-//            productServiceClient.rollbackStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
-//            log.info("재고 롤백 완료: PRODUCT ID {}", orderProductDto.getProductId());
-//        }
-//    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void rollbackStock(List<OrderProductRequestDto> orderProducts) {
+        for (OrderProductRequestDto orderProduct : orderProducts) {
+            productServiceClient.rollbackStock(orderProduct.getProductId(), orderProduct.getQuantity());
+        }
+    }
 
     /**
-     * 상품 구매 가능여부 확인 & 재고 감소
+     * 배송 정보 저장
      *
-     * @param orderRequestDto
+     * @param order
+     * @param shippingRequestDto
      */
-//    @Transactional
-//    public synchronized void checkAndUpdateStock(OrderRequestDto orderRequestDto) {
-//        for (OrderProductRequestDto orderProductDto : orderRequestDto.getOrderProducts()) {
-//            productServiceClient.checkAndUpdateStock(orderProductDto.getProductId(), orderProductDto.getQuantity());
-//        }
-//    }
+    @Transactional
+    public void saveShipping(Order order, ShippingRequestDto shippingRequestDto) {
+        Shipping shipping = new Shipping();
+        shipping.setAddress(shippingRequestDto.getAddress());
+        shipping.setAddressDetail(shippingRequestDto.getAddressDetail());
+        shipping.setPhone(shippingRequestDto.getPhone());
+        shipping.setOrder(order);
 
-
+        shippingRepository.save(shipping);
+        log.info("배송 정보 저장 완료");
+    }
 
     /**
      * 사용자별 전체 주문 내역 조회
@@ -279,8 +217,6 @@ public class OrderService {
      */
     public List<OrderResponseDto> getOrdersByMemberId(Long memberId) {
         Iterable<Order> orders = orderRepository.findByMemberId(memberId);
-
-        //Iterable to List
         List<Order> orderList = StreamSupport.stream(orders.spliterator(), false)
                 .collect(Collectors.toList());
 

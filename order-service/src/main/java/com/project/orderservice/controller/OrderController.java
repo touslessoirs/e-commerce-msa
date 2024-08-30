@@ -75,12 +75,15 @@ public class OrderController {
         if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
             log.info("결제 성공");
             return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
-        } else if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
-            log.info("결제 실패");
-            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        } else {
+            if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
+                log.info("결제 실패");
+                orderService.rollbackStock(orderRequestDto.getOrderProducts());
+                throw new CustomException(ErrorCode.PAYMENT_FAILED);
+            }
+            log.info("주문 실패");
+            throw new CustomException(ErrorCode.ORDER_FAILED);
         }
-        log.info("주문 실패");
-        throw new CustomException(ErrorCode.ORDER_FAILED);
     }
 
     /* 사용자별 전체 주문 내역 조회 */

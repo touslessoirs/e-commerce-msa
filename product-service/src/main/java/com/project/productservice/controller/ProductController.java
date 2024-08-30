@@ -73,33 +73,33 @@ public class ProductController {
 //        productService.rollbackStock(productId, quantity);
 //    }
 
-    /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
-//    @GetMapping("/check-product/{productId}")
-//    public void checkAndUpdateStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
-//        log.info("checkAndUpdateStock 호출");
-//        productService.checkAndUpdateStock(productId, quantity);
-//    }
 
-    /* 구매 가능 시간 확인 */
-    @GetMapping("/check-availability")
-    public ResponseEntity<Boolean> isProductAvailable(@RequestParam Long productId) {
-        boolean isAvailable = productService.isProductAvailable(productId);
+    /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
+    @PostMapping("/check-product")
+    public ResponseEntity<Boolean> processPurchase(@RequestParam Long productId, @RequestParam int quantity) {
+        log.info("processPurchase 호출");
+        boolean isAvailable = productService.processPurchase(productId, quantity);
         return ResponseEntity.ok(isAvailable);
     }
 
-    /* 재고 수량 확인 & 재고 감소 */
+    /* 구매 가능 시간 확인 */
+    @GetMapping("/check-purchase-time")
+    public ResponseEntity<Boolean> validatePurchaseTime(@RequestParam Long productId) {
+        boolean isAvailable = productService.validatePurchaseTime(productId);
+        return ResponseEntity.ok(isAvailable);
+    }
+
+    /* 재고 확인 및 수량 감소 (Redis, DB) */
     @PostMapping("/check-and-update-stock")
     public ResponseEntity<Boolean> checkAndUpdateStock(@RequestParam Long productId, @RequestParam int quantity) {
         boolean isStockUpdated = productService.checkAndUpdateStock(productId, quantity);
         return ResponseEntity.ok(isStockUpdated);
     }
 
-    /* 주문 시 성패여부 분기처리 */
-    @PostMapping("/update-stock")
-    public ResponseEntity<Void> updateStock(@RequestParam Long productId,
-                                            @RequestParam int quantity,
-                                            @RequestParam boolean success) {
-        productService.updateStock(productId, quantity, success);
+    /* 주문 실패 시 롤백 */
+    @PostMapping("/rollback-stock")
+    public ResponseEntity rollbackStock(@RequestParam Long productId, @RequestParam int quantity) {
+        productService.rollbackStock(productId, quantity);
         return ResponseEntity.ok().build();
     }
 

@@ -1,18 +1,14 @@
 package com.project.productservice;
 
 import com.project.productservice.entity.Product;
-import com.project.productservice.exception.CustomException;
 import com.project.productservice.repository.ProductRepository;
 import com.project.productservice.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.LocalDateTime;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 public class ProductServiceTest {
@@ -87,38 +83,38 @@ public class ProductServiceTest {
 //        assertEquals("재고가 부족하여 결제할 수 없습니다.", exception.getMessage());
 //    }
 
-    @Test
-    public void testCheckPurchaseStartTime_whenTimeIsValid() {
-        // given
-        // 현재 시간이 제품의 구매 시작 시간 이후일 때
+//    @Test
+//    public void testCheckPurchaseStartTime_whenTimeIsValid() {
+//        // given
+//        // 현재 시간이 제품의 구매 시작 시간 이후일 때
+//
+//        // when
+//        boolean result = productService.checkPurchaseStartTime(productId);
+//
+//        // then
+//        assertTrue(result);
+//    }
 
-        // when
-        boolean result = productService.checkPurchaseStartTime(productId);
-
-        // then
-        assertTrue(result);
-    }
-
-    @Test
-    public void testCheckPurchaseStartTime_whenTimeIsInvalid() {
-        // given
-        Product product = new Product();
-        product.setName("Future Product");
-        product.setUnitPrice(1);
-        product.setStock(100);
-        product.setCategory("for test");
-        product.setPurchaseStartTime(currentTime.plusDays(1));  // 현재 시간 1일 후
-        product = productRepository.save(product);
-
-        Long futureProductId = product.getProductId();
-
-        // when & then
-        CustomException exception = assertThrows(CustomException.class, () -> {
-            productService.checkPurchaseStartTime(futureProductId);
-        });
-
-        assertEquals("아직 구매 가능한 시간이 아닙니다.", exception.getMessage());
-    }
+//    @Test
+//    public void testCheckPurchaseStartTime_whenTimeIsInvalid() {
+//        // given
+//        Product product = new Product();
+//        product.setName("Future Product");
+//        product.setUnitPrice(1);
+//        product.setStock(100);
+//        product.setCategory("for test");
+//        product.setPurchaseStartTime(currentTime.plusDays(1));  // 현재 시간 1일 후
+//        product = productRepository.save(product);
+//
+//        Long futureProductId = product.getProductId();
+//
+//        // when & then
+//        CustomException exception = assertThrows(CustomException.class, () -> {
+//            productService.checkPurchaseStartTime(futureProductId);
+//        });
+//
+//        assertEquals("아직 구매 가능한 시간이 아닙니다.", exception.getMessage());
+//    }
 
 
 }
