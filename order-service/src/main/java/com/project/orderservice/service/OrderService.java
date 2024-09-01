@@ -1,10 +1,7 @@
 package com.project.orderservice.service;
 
 import com.project.orderservice.client.ProductServiceClient;
-import com.project.orderservice.dto.OrderProductRequestDto;
-import com.project.orderservice.dto.OrderRequestDto;
-import com.project.orderservice.dto.OrderResponseDto;
-import com.project.orderservice.dto.ShippingRequestDto;
+import com.project.orderservice.dto.*;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
@@ -14,8 +11,9 @@ import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -31,53 +29,98 @@ public class OrderService {
     private final OrderProductRepository orderProductRepository;
     private final ShippingRepository shippingRepository;
     private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
     private final ProductServiceClient productServiceClient;
     private final FeignErrorDecoder feignErrorDecoder;
+    private final RedissonClient redissonClient;
 
     public OrderService(OrderRepository orderRepository, OrderProductRepository orderProductRepository,
                         ShippingRepository shippingRepository, PaymentRepository paymentRepository,
+                        PaymentService paymentService,
                         ProductServiceClient productServiceClient,
-                        FeignErrorDecoder feignErrorDecoder
+                        FeignErrorDecoder feignErrorDecoder,
+                        RedissonClient redissonClient
     ) {
         this.orderRepository = orderRepository;
         this.orderProductRepository = orderProductRepository;
         this.shippingRepository = shippingRepository;
         this.paymentRepository = paymentRepository;
+        this.paymentService = paymentService;
         this.productServiceClient = productServiceClient;
         this.feignErrorDecoder = feignErrorDecoder;
+        this.redissonClient = redissonClient;
+    }
+
+    /**
+     * 구매 가능 시간 & 재고 확인
+     *
+     * @param orderRequestDto
+     * @return
+     */
+    @Transactional
+    public boolean requestOrder(OrderRequestDto orderRequestDto) {
+        for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
+            boolean isAvailable = productServiceClient.checkProductForOrder(    // 구매 가능 시간 & 재고 확인
+                    orderProduct.getProductId(),
+                    orderProduct.getQuantity());
+
+            if (!isAvailable) {
+                //PURCHASE_TIME_INVALID, STOCK_INSUFFICIENT 외의 원인
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
      * 주문하기
-     * 
+     *
      * @param memberId
      * @param orderRequestDto
      * @return
      */
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderRequestDto orderRequestDto) {
-        // 1. 구매 가능 시간 & 재고 확인 + 재고 감소
-        for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
-            boolean isAvailable = productServiceClient.processPurchase(orderProduct.getProductId(), orderProduct.getQuantity()).getBody();
+        Order savedOrder = null;
+        PaymentResponseDto savedPayment = null;
 
-            if (!isAvailable) {
-                throw new CustomException(ErrorCode.ORDER_FAILED);
+        for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
+            // 1. 재고 수량 감소
+            String lockKey = "order_lock_product: " + orderProduct.getProductId();
+            RLock lock = redissonClient.getLock(lockKey);
+
+            lock.lock();
+
+            try {
+                productServiceClient.reduceStock(orderProduct.getProductId(), orderProduct.getQuantity());
+            } finally {
+                lock.unlock();
             }
         }
 
         // 2. 주문 정보 저장
-        Order order = saveOrder(memberId, orderRequestDto);
+        savedOrder = saveOrder(memberId, orderRequestDto);
 
         // 3. 결제 처리 및 결제 정보 저장
-        boolean paymentSuccessful = processPayment(order);
+        savedPayment = paymentService.processPayment(savedOrder);
 
-        if (paymentSuccessful) {
-            // 4. 결제 성공 -> 배송 정보 저장
-            saveShipping(order, orderRequestDto.getShipping());
+        if (savedPayment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
+            // 4-1. 결제 성공
+            savedOrder.setStatus(OrderStatusEnum.PAYMENT_COMPLETED);
+        } else {
+            // 4-2. 결제 실패
+            savedOrder.setStatus(OrderStatusEnum.PAYMENT_FAILED);
         }
 
-        OrderResponseDto orderResponseDto = new OrderResponseDto(order);
-        return orderResponseDto;
+        // 4-3. 결제 성패여부 저장
+        orderRepository.save(savedOrder);
+
+        // 배송 정보 저장
+        saveShipping(savedOrder, orderRequestDto.getShipping());
+
+        //트랜잭션 완료
+        return new OrderResponseDto(savedOrder);
     }
 
     /**
@@ -87,7 +130,6 @@ public class OrderService {
      * @param orderRequestDto
      * @return
      */
-    @Transactional
     public Order saveOrder(Long memberId, OrderRequestDto orderRequestDto) {
         List<OrderProduct> orderProductList = new ArrayList<>();
         int totalQuantity = 0;
@@ -122,72 +164,21 @@ public class OrderService {
         return saveOrder;
     }
 
-    /**
-     * 결제하기
-     *
-     * @param order
-     * @return
-     */
-    private boolean processPayment(Order order) {
-        // 1. 주문 정보를 바탕으로 결제 정보 생성
-        Payment payment = createPayment(order);
-
-        // 2. 결제 처리 및 결제 정보 저장
-        savePayment(payment);
-
-        // 3. 결제 성공 여부 반환
-        return payment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED;
-    }
-
-    /**
-     * 결제 정보 생성
-     *
-     * @param order
-     * @return Payment
-     */
-    public Payment createPayment(Order order) {
-        Payment payment = new Payment();
-        payment.setOrder(order);
-        payment.setStatus(PaymentStatusEnum.PAYMENT_PENDING);
-
-        return payment;
-    }
-
-    /**
-     * 결제 처리 및 결제 정보 저장
-     * PAYMENT_PENDING -> PAYMENT_COMPLETED
-     * 고객 이탈율 시나리오 : 이탈율 20%
-     *
-     * @param payment
-     * @return
-     */
     @Transactional
-    public void savePayment(Payment payment) {
-        // PAYMENT_PENDING -> PAYMENT_COMPLETED 과정에서 이탈
-        // ex) 잔액 부족으로 인한 결제 실패
-        if (Math.random() < 0.20) { //20%
-            payment.setStatus(PaymentStatusEnum.PAYMENT_FAILED);
-            payment.getOrder().setStatus(OrderStatusEnum.PAYMENT_FAILED);
-        } else {
-            payment.setStatus(PaymentStatusEnum.PAYMENT_COMPLETED);
-            payment.getOrder().setStatus(OrderStatusEnum.PAYMENT_COMPLETED);
-        }
+    public void rollbackStock(List<OrderProductRequestDto> orderProductRequestList) {
+        log.info("PAYMENT_FAILED 4");
+        for (OrderProductRequestDto orderProduct : orderProductRequestList) {
+            String lockKey = "order_lock_product: " + orderProduct.getProductId();
+            RLock lock = redissonClient.getLock(lockKey);
 
-        paymentRepository.save(payment);
-        orderRepository.save(payment.getOrder());
-        log.info("결제 정보 저장 완료");
-        log.info(String.valueOf(payment.getOrder().getStatus()));
-    }
+            lock.lock();
 
-    /**
-     * 결제 실패 -> 재고 rollback
-     *
-     * @param orderProducts
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void rollbackStock(List<OrderProductRequestDto> orderProducts) {
-        for (OrderProductRequestDto orderProduct : orderProducts) {
+            try {
             productServiceClient.rollbackStock(orderProduct.getProductId(), orderProduct.getQuantity());
+            log.info("PAYMENT_FAILED 5");
+            } finally {
+                lock.unlock();
+            }
         }
     }
 

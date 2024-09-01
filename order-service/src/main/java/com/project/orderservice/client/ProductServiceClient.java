@@ -2,6 +2,7 @@ package com.project.orderservice.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -13,8 +14,16 @@ public interface ProductServiceClient {
 //    public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable("productId") Long productId);
 
     /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
-    @PostMapping("/check-product")
-    public ResponseEntity<Boolean> processPurchase(@RequestParam Long productId, @RequestParam int quantity);
+//    @PostMapping("/check-product")
+//    public ResponseEntity<Boolean> processPurchase(@RequestParam Long productId, @RequestParam int quantity);
+
+    /* 구매 가능 시간 & 재고 확인 */
+    @GetMapping("/check-product")
+    public Boolean checkProductForOrder(@RequestParam Long productId, @RequestParam int quantity);
+
+    /* 재고 수량 감소 */
+    @PostMapping("/reduce-stock")
+    public ResponseEntity reduceStock(@RequestParam Long productId, @RequestParam int quantity);
 
 //    /* 구매 가능 시간 확인 */
 //    @GetMapping("/check-purchase-time")
@@ -26,7 +35,7 @@ public interface ProductServiceClient {
 
     /* 주문 실패 시 롤백 */
     @PostMapping("/rollback-stock")
-    public ResponseEntity<Void> rollbackStock(@RequestParam Long productId, @RequestParam int quantity);
+    public ResponseEntity rollbackStock(@RequestParam Long productId, @RequestParam int quantity);
 
 
 

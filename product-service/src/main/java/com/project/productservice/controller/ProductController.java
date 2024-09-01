@@ -75,32 +75,51 @@ public class ProductController {
 
 
     /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
-    @PostMapping("/check-product")
-    public ResponseEntity<Boolean> processPurchase(@RequestParam Long productId, @RequestParam int quantity) {
-        log.info("processPurchase 호출");
-        boolean isAvailable = productService.processPurchase(productId, quantity);
-        return ResponseEntity.ok(isAvailable);
+//    @PostMapping("/check-product")
+//    public ResponseEntity<Boolean> checkProductForOrder(@RequestParam Long productId, @RequestParam int quantity) {
+//        log.info("checkProductForOrder 호출");
+//        boolean isAvailable = productService.checkProductForOrder(productId, quantity);
+//        return ResponseEntity.ok(isAvailable);
+//    }
+
+    /* 주문 요청 - 주문 가능 여부 확인 */
+    @GetMapping("/check-product")
+    public boolean checkProductForOrder(@RequestParam Long productId, @RequestParam int quantity) {
+        boolean isAvailable = productService.checkProductForOrder(productId, quantity);
+        return isAvailable;
     }
 
     /* 구매 가능 시간 확인 */
     @GetMapping("/check-purchase-time")
     public ResponseEntity<Boolean> validatePurchaseTime(@RequestParam Long productId) {
-        boolean isAvailable = productService.validatePurchaseTime(productId);
+        boolean isAvailable = productService.checkPurchaseTime(productId);
         return ResponseEntity.ok(isAvailable);
     }
 
-    /* 재고 확인 및 수량 감소 (Redis, DB) */
-    @PostMapping("/check-and-update-stock")
-    public ResponseEntity<Boolean> checkAndUpdateStock(@RequestParam Long productId, @RequestParam int quantity) {
-        boolean isStockUpdated = productService.checkAndUpdateStock(productId, quantity);
+    /* 주문 가능한 재고량인지 확인 */
+    @GetMapping("/check-stock")
+    public ResponseEntity<Boolean> checkStock(@RequestParam Long productId, @RequestParam int quantity) {
+        boolean isStockUpdated = productService.checkStock(productId, quantity);
         return ResponseEntity.ok(isStockUpdated);
+    }
+
+    /* 재고 수량 감소 (Redis, DB) */
+    @PostMapping("/reduce-stock")
+    public ResponseEntity reduceStock(@RequestParam Long productId, @RequestParam int quantity) {
+        productService.reduceStock(productId, quantity);
+        return ResponseEntity.ok("Stock reduced successfully.");
     }
 
     /* 주문 실패 시 롤백 */
     @PostMapping("/rollback-stock")
     public ResponseEntity rollbackStock(@RequestParam Long productId, @RequestParam int quantity) {
         productService.rollbackStock(productId, quantity);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("Stock rolled back successfully.");
     }
 
+    /* 특정 상품의 재고 조회 */
+    public ResponseEntity<Integer> getProductStock(@PathVariable Long productId) {
+        int stock = productService.getProductStock(productId);
+        return ResponseEntity.ok(stock);
+    }
 }

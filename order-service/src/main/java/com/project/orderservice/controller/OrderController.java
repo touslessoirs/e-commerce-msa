@@ -47,42 +47,35 @@ public class OrderController {
         return greeting;
     }
 
-    /* 주문하기 */
-//    @PostMapping("/{memberId}/orders")
-//    public ResponseEntity<OrderResponseDto> createOrder(@PathVariable("memberId") Long memberId,
-//                                      @Valid @RequestBody OrderRequestDto orderRequestDto) {
-//
-//        OrderResponseDto orderResponseDto = orderService.createOrder(memberId, orderRequestDto);
-//
-//        //결제 성공여부 분기 처리
-//        if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
-//            log.info("결제 성공");
-//            return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
-//        } else if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
-//            //재고 rollback
-//            log.info("결제 실패");
-//            orderService.rollbackStock(orderRequestDto);
-//            throw new CustomException(ErrorCode.PAYMENT_FAILED);
-//        }
-//        throw new CustomException(ErrorCode.ORDER_FAILED);
-//    }
-    @PostMapping("/{memberId}/orders")
-    public ResponseEntity<OrderResponseDto> createOrder(@PathVariable("memberId") Long memberId,
+    /* 주문 요청 - 주문 가능 여부 확인 및 주문하기 */
+    @PostMapping("/{memberId}/orders/request")
+    public ResponseEntity<OrderResponseDto> requestOrder(@PathVariable("memberId") Long memberId,
                                       @Valid @RequestBody OrderRequestDto orderRequestDto) {
 
-        OrderResponseDto orderResponseDto = orderService.createOrder(memberId, orderRequestDto);
+        // 구매 가능 시간 & 재고 확인
+        boolean isAvailable = orderService.requestOrder(orderRequestDto);
 
-        if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
-            log.info("결제 성공");
-            return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
-        } else {
-            if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
-                log.info("결제 실패");
+        if (isAvailable) {
+            log.info("주문 가능");
+            
+            OrderResponseDto orderResponseDto = orderService.createOrder(memberId, orderRequestDto);
+
+            if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_COMPLETED) {
+                log.info("결제 성공");
+                return ResponseEntity.status(HttpStatus.CREATED).body(orderResponseDto);
+            } else {
                 orderService.rollbackStock(orderRequestDto.getOrderProducts());
-                throw new CustomException(ErrorCode.PAYMENT_FAILED);
+                if (orderResponseDto.getStatus() == OrderStatusEnum.PAYMENT_FAILED) {
+                    throw new CustomException(ErrorCode.PAYMENT_FAILED);
+                } else {
+                    throw new CustomException(ErrorCode.ORDER_FAILED);
+                }
             }
-            log.info("주문 실패");
-            throw new CustomException(ErrorCode.ORDER_FAILED);
+
+        } else {
+            //주문 불가능 -> 클라이언트 응답 반환
+            log.info("주문 불가능");
+            throw new CustomException(ErrorCode.ORDER_REQUEST_DENIED);
         }
     }
 

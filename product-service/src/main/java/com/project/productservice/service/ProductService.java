@@ -6,7 +6,10 @@ import com.project.productservice.exception.CustomException;
 import com.project.productservice.exception.ErrorCode;
 import com.project.productservice.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,19 +18,24 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+@EnableAsync
 @Slf4j
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final RedisTemplate<String, String> redisTemplate;
+    private final RedissonClient redissonClient;
 
-    private static final String STOCK_KEY_PREFIX = "product:stock:";
+    private static final String STOCK_KEY_PREFIX = "stock_ID: ";
+    private static final String PURCHASE_KEY_PREFIX = "purchase_start_time_ID: ";
 
     public ProductService(ProductRepository productRepository,
-                          RedisTemplate redisTemplate) {
+                          RedisTemplate redisTemplate,
+                          RedissonClient redissonClient) {
         this.productRepository = productRepository;
         this.redisTemplate = redisTemplate;
+        this.redissonClient = redissonClient;
     }
 
     /**
@@ -60,15 +68,6 @@ public class ProductService {
         ProductResponseDto productResponseDto = new ProductResponseDto(product);
         return productResponseDto;
     }
-
-    /**
-     * 주문 시 재고 관련 처리
-     * 1. 구매 가능 시간 확인
-     * 2. 재고 확인 및 수량 감소
-     *
-     * @param productId
-     * @param quantity  (감소 -, 증가 +)
-     */
 
     /* synchronized */
     /* Pessimistic Lock */
@@ -136,7 +135,6 @@ public class ProductService {
 //        Product product = productRepository.findById(productId)
 //                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 //
-    // 구매 가능 시간 확인
 //        if (checkPurchaseStartTime(productId)) {
 //
 //        // 재고 수량 확인
@@ -172,28 +170,31 @@ public class ProductService {
 //        log.info("재고 수량이 업데이트되었습니다. Product ID: {}, Updated Stock: {}", productId, updatedStock);
 //    }
 
-    /* Caching + Pessimistic Lock */
-    @Transactional(readOnly = false)
-    public boolean processPurchase(Long productId, int quantity) {
-        log.info("processPurchase 호출");
-
+    /**
+     * 주문 요청 - 주문 가능 여부 확인
+     *
+     * @param productId
+     * @param quantity
+     */
+    @Transactional
+    public boolean checkProductForOrder(Long productId, int quantity) {
         // 1. 구매 가능 시간 확인
-        validatePurchaseTime(productId);
+        if (checkPurchaseTime(productId)) {
+            //2. 주문 가능한 재고량인지 확인
+            return checkStock(productId, quantity);
+        }
 
-        // 2. 재고 확인 및 수량 감소
-        return checkAndUpdateStock(productId, quantity);
+        return false;
     }
 
     /**
      * 구매 가능 시간 확인
      *
      * @param productId
-     * @return
+     * @return 구매 가능 여부
      */
-    public boolean validatePurchaseTime(Long productId) {
-        log.info("validatePurchaseTime 호출");
-
-        String purchaseStartTimeKey = "purchaseStartTime_ID: " + productId;
+    public boolean checkPurchaseTime(Long productId) {
+        String purchaseStartTimeKey = PURCHASE_KEY_PREFIX + productId;
         String purchaseStartTimeStr = redisTemplate.opsForValue().get(purchaseStartTimeKey);
 
         LocalDateTime purchaseStartTime;
@@ -212,25 +213,19 @@ public class ProductService {
             return true;
         }
 
+        log.error("PURCHASE_TIME_INVALID");
         throw new CustomException(ErrorCode.PURCHASE_TIME_INVALID);
     }
 
     /**
-     * 재고 확인 및 수량 감소 (Redis, DB)
+     * 주문 가능한 재고량인지 확인
      *
      * @param productId
      * @param quantity
-     * @return
+     * @return 재고 수량 충분한지 여부
      */
-    @Transactional
-    public boolean checkAndUpdateStock(Long productId, int quantity) {
-        log.info("checkAndUpdateStock 호출");
-
-        // 1. Pessimistic Lock
-        Product product = productRepository.findByIdForUpdate(productId)
-                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-
-        // 2. 캐싱된 정보 조회
+    public boolean checkStock(Long productId, int quantity) {
+        // 1. 캐시 조회
         String stockKey = STOCK_KEY_PREFIX + productId;
         String stockValue = redisTemplate.opsForValue().get(stockKey);
 
@@ -239,49 +234,123 @@ public class ProductService {
         if (stockValue != null) {
             stock = Integer.parseInt(stockValue);
         } else {
-            // 2-1. 캐시에 재고 정보가 없는 경우 -> 캐싱
+            // 2. 캐시에 재고 정보가 없는 경우 -> 캐싱
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
             stock = product.getStock();
             redisTemplate.opsForValue().set(stockKey, String.valueOf(stock));
         }
 
         // 3. 재고 확인
-        if (stock < quantity) {
-            throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
+        if (stock >= quantity) {
+            return true;
         }
 
-        int updatedStock = stock - quantity;
-
-        // 4-1. DB 재고 감소
-        product.setStock(updatedStock);
-        productRepository.save(product);
-        log.info("DB STOCK UPDATE: {} (productId: {})", updatedStock, productId);
-
-        // 4-2. Redis 재고 감소
-        redisTemplate.opsForValue().set(stockKey, String.valueOf(updatedStock));
-        log.info("REDIS STOCK UPDATE: {} (productId: {})", updatedStock, productId);
-
-        return true;
+        log.error("STOCK_INSUFFICIENT");
+        throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
     }
 
     /**
-     * 결제 실패 -> 재고 rollback (Redis, DB)
+     * 재고 수량 감소
+     *
+     * @param productId
+     * @param quantity
+     */
+    @Transactional
+    public void reduceStock(Long productId, int quantity) {
+        String stockKey = STOCK_KEY_PREFIX + productId;
+
+        // 1. REDIS 재고 감소
+        String stockValue = redisTemplate.opsForValue().get(stockKey);
+        int stock;
+
+        if (stockValue != null) {
+            stock = Integer.parseInt(stockValue);
+            if (stock < quantity) {
+                throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
+            }
+            redisTemplate.opsForValue().decrement(stockKey, quantity);
+            log.info("REDIS STOCK REDUCE - KEY: {}, VALUE: {}", stockKey, stock-quantity);
+        } else {
+            // 캐시에 값이 없을 경우 -> 데이터베이스에서 재고 조회 후 캐싱
+            stock = getProductStock(productId) - quantity;
+            if (stock < 0) {
+                throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
+            }
+            redisTemplate.opsForValue().set(stockKey, String.valueOf(stock));
+            log.info("REDIS STOCK SET - KEY: {}, VALUE: {}", stockKey, stock);
+        }
+
+        // 2. DB 재고 감소 (비동기)
+        reduceDatabaseStockAsync(productId, quantity);
+    }
+
+    @Async
+    public void reduceDatabaseStockAsync(Long productId, int quantity) {
+        // DB 재고 감소 (비동기)
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        int updateStock = product.getStock() - quantity;
+        if (updateStock < 0) {
+            throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
+        }
+
+        product.setStock(updateStock);
+        productRepository.save(product);
+        log.info("[ASYNC] DB STOCK REDUCE - ID: {}, VALUE: {}", product.getProductId(), product.getStock());
+    }
+
+    /**
+     * 재고 수량 증가(결제 실패 시 rollback)
      *
      * @param productId
      * @param quantity
      */
     @Transactional
     public void rollbackStock(Long productId, int quantity) {
-        // 1. DB 재고 롤백
-        Product product = productRepository.findByIdForUpdate(productId)
+        String stockKey = STOCK_KEY_PREFIX + productId;
+
+        // 1. REDIS 재고 롤백
+        String stockValue = redisTemplate.opsForValue().get(stockKey);
+        int stock;
+
+        if (stockValue != null) {
+            stock = Integer.parseInt(stockValue);
+            redisTemplate.opsForValue().increment(stockKey, quantity);
+            log.info("REDIS STOCK ROLLBACK - KEY: {}, VALUE: {}", productId, stock+quantity);
+        } else {
+            // 캐시에 값이 없을 경우 -> 데이터베이스에서 재고 조회 후 캐싱
+            int rollbackStock = getProductStock(productId) + quantity;
+            redisTemplate.opsForValue().set(stockKey, String.valueOf(rollbackStock));
+            log.info("REDIS STOCK SET - KEY: {}, VALUE: {}", stockKey, rollbackStock);
+        }
+
+        // 2. DB 재고 롤백 (비동기)
+        rollbackDatabaseStockAsync(productId, quantity);
+    }
+
+    @Async
+    public void rollbackDatabaseStockAsync(Long productId, int quantity) {
+        // DB 재고 롤백 (비동기)
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
         product.setStock(product.getStock() + quantity);
         productRepository.save(product);
-        log.info("DB STOCK ROLLBACK: {} (productId : {})", product.getStock(), productId);
+        log.info("[ASYNC] DB STOCK ROLLBACK - ID: {}, VALUE: {}", product.getProductId(), product.getStock());
+    }
 
-        // 2. Redis 재고 롤백
-        redisTemplate.opsForValue().increment(STOCK_KEY_PREFIX + productId, quantity);
-        log.info("REDIS STOCK ROLLBACK: {} (productId : {})", redisTemplate.opsForValue().get(STOCK_KEY_PREFIX + productId), productId);
+    /**
+     * 특정 상품의 재고 조회
+     *
+     * @param productId
+     * @return stock
+     */
+    public int getProductStock(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+        return product.getStock();
     }
 
 }
