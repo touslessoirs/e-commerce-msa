@@ -5,7 +5,6 @@ import com.project.orderservice.dto.OrderResponseDto;
 import com.project.orderservice.entity.OrderStatusEnum;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
-import com.project.orderservice.messageQueue.KafkaProducer;
 import com.project.orderservice.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,12 +28,10 @@ public class OrderController {
     private String greeting;
     private final Environment env;
     private final OrderService orderService;
-    private final KafkaProducer kafkaProducer;
 
-    public OrderController(Environment env, OrderService orderService, KafkaProducer kafkaProducer) {
+    public OrderController(Environment env, OrderService orderService) {
         this.env = env;
         this.orderService = orderService;
-        this.kafkaProducer = kafkaProducer;
     }
 
     @GetMapping("/health-check")

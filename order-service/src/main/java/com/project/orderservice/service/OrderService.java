@@ -108,16 +108,17 @@ public class OrderService {
         if (savedPayment.getStatus() == PaymentStatusEnum.PAYMENT_COMPLETED) {
             // 4-1. 결제 성공
             savedOrder.setStatus(OrderStatusEnum.PAYMENT_COMPLETED);
+
         } else {
             // 4-2. 결제 실패
             savedOrder.setStatus(OrderStatusEnum.PAYMENT_FAILED);
         }
 
-        // 4-3. 결제 성패여부 저장
-        orderRepository.save(savedOrder);
-
         // 배송 정보 저장
         saveShipping(savedOrder, orderRequestDto.getShipping());
+
+        // 4-3. 결제 성패여부 저장
+        orderRepository.save(savedOrder);
 
         //트랜잭션 완료
         return new OrderResponseDto(savedOrder);
@@ -174,8 +175,8 @@ public class OrderService {
             lock.lock();
 
             try {
-            productServiceClient.rollbackStock(orderProduct.getProductId(), orderProduct.getQuantity());
-            log.info("PAYMENT_FAILED 5");
+                productServiceClient.rollbackStock(orderProduct.getProductId(), orderProduct.getQuantity());
+                log.info("PAYMENT_FAILED 5");
             } finally {
                 lock.unlock();
             }

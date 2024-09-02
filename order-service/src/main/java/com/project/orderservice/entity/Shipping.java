@@ -25,4 +25,11 @@ public class Shipping {
     @OneToOne
     @JoinColumn(name = "order_id")
     private Order order;
+
+    public Shipping(String address, String addressDetail, String phone, Order order) {
+        this.address = address;
+        this.addressDetail = addressDetail;
+        this.phone = phone;
+        this.order = order;
+    }
 }

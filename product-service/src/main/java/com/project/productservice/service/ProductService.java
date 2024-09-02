@@ -69,107 +69,6 @@ public class ProductService {
         return productResponseDto;
     }
 
-    /* synchronized */
-    /* Pessimistic Lock */
-//    @Transactional(readOnly = false)
-//    public synchronized void updateStock(Long productId, int quantity) {
-//        Product product = productRepository.findById(productId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-//
-//        product.setStock(product.getStock() + quantity);
-//
-//        if (product.getStock() < 0) {
-//            throw new CustomException(ErrorCode.OUT_OF_STOCK);
-//        }
-//
-//        productRepository.save(product);
-//    }
-
-    /* Optimistic Lock */
-//    @Transactional
-//    public synchronized void updateStock(Long productId, int quantity) {
-//
-//        int retryCount = 3; // 재시도 횟수 설정
-//        while (retryCount > 0) {
-//            try {
-//                Product product = productRepository.findById(productId)
-//                        .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-//
-//                product.setStock(product.getStock() + quantity);
-//
-//                if (product.getStock() < 0) {
-//                    throw new CustomException(ErrorCode.OUT_OF_STOCK);
-//                }
-//
-//                productRepository.save(product);
-//                break;
-//            } catch (OptimisticLockException e) {
-//                log.info("낙관적 락 충돌 - 재시도");
-//
-//                retryCount--;
-//                if (retryCount == 0) {
-//                    throw new CustomException(ErrorCode.CONCURRENCY_FAILURE);
-//                }
-//            }
-//        }
-//    }
-
-    /* Distributed Lock */
-//    @DistributedLock(key = "'PRODUCTID-' + #productId")
-//    public void updateStock(Long productId, int quantity) {
-//        Product product = productRepository.findById(productId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-//
-//        product.setStock(product.getStock() + quantity);
-//
-//        if (product.getStock() < 0) {
-//            throw new CustomException(ErrorCode.OUT_OF_STOCK);
-//        }
-//
-//        productRepository.save(product);
-//    }
-
-//    /* Redis Caching */
-//    @DistributedLock(key = "'PRODUCTID-' + #productId")
-//    public void checkAndUpdateStock(Long productId, int quantity) {
-//        Product product = productRepository.findById(productId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
-//
-//        if (checkPurchaseStartTime(productId)) {
-//
-//        // 재고 수량 확인
-//        String stockKey = "stock_ID: " + productId;
-//        String stockStr = redisTemplate.opsForValue().get(stockKey);
-//
-//        int stock;
-//
-//        if (stockStr == null) {
-//            stock = product.getStock();
-//            log.info("@@@@@@@@@@@@@@ STOCK 캐싱");
-//            redisTemplate.opsForValue().set(stockKey, String.valueOf(stock));
-//        } else {
-//            stock = Integer.parseInt(stockStr);
-//        }
-//
-//        if (stock < quantity) {
-//            throw new CustomException(ErrorCode.STOCK_INSUFFICIENT);
-//        }
-//
-//        int updatedStock = stock - quantity;
-//        if (updatedStock < 0) {
-//            throw new CustomException(ErrorCode.OUT_OF_STOCK);
-//        }
-//
-//        // DB 업데이트
-//        product.setStock(updatedStock);
-//        productRepository.save(product);
-//
-//        // Redis 업데이트
-//        redisTemplate.opsForValue().set(stockKey, String.valueOf(updatedStock));
-//
-//        log.info("재고 수량이 업데이트되었습니다. Product ID: {}, Updated Stock: {}", productId, updatedStock);
-//    }
-
     /**
      * 주문 요청 - 주문 가능 여부 확인
      *
@@ -352,5 +251,4 @@ public class ProductService {
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
         return product.getStock();
     }
-
 }
