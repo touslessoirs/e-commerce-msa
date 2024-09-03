@@ -51,8 +51,9 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                                             Authentication auth) throws IOException, ServletException {
         String username = ((UserDetailsImpl) auth.getPrincipal()).getUsername();
         UserRoleEnum role = ((UserDetailsImpl) auth.getPrincipal()).getMember().getRole();
+        String memberId = String.valueOf(((UserDetailsImpl) auth.getPrincipal()).getMemberId());
 
-        String token = jwtUtil.createToken(username, role);
+        String token = jwtUtil.createToken(username, role, memberId);
 
         //응답 메시지 설정
         res.setStatus(HttpServletResponse.SC_OK);

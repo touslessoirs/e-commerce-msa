@@ -36,12 +36,13 @@ public class JwtUtil {
     }
 
     // 토큰 생성
-    public String createToken(String username, UserRoleEnum role) {
+    public String createToken(String username, UserRoleEnum role, String memberId) {
         Date date = new Date();
 
         return Jwts.builder()
-                .setSubject(username) // 사용자 식별자값(ID)
+                .setSubject(username) // 사용자 식별자값(email)
                 .claim(AUTHORIZATION_KEY, role)
+                .claim("memberId", memberId)
                 .setExpiration(new Date(date.getTime() + expirationTime))
                 .setIssuedAt(date)
                 .signWith(key, signatureAlgorithm)
@@ -63,13 +64,13 @@ public class JwtUtil {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (SecurityException | MalformedJwtException | SignatureException e) {
-            log.error("Invalid JWT signature - 유효하지 않은 JWT 서명 입니다.");
+            log.error("유효하지 않은 JWT 서명입니다.");
         } catch (ExpiredJwtException e) {
-            log.error("Expired JWT token - 만료된 JWT token 입니다.");
+            log.error("만료된 JWT 토큰입니다.");
         } catch (UnsupportedJwtException e) {
-            log.error("Unsupported JWT token - 지원되지 않는 JWT 토큰 입니다.");
+            log.error("지원되지 않는 JWT 토큰입니다.");
         } catch (IllegalArgumentException e) {
-            log.error("JWT claims is empty - 잘못된 JWT 토큰 입니다.");
+            log.error("잘못된 JWT 토큰입니다.");
         }
         return false;
     }
@@ -78,14 +79,4 @@ public class JwtUtil {
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     }
-
-//    public static byte[] hexStringToByteArray(String s) {
-//        int len = s.length();
-//        byte[] data = new byte[len / 2];
-//        for (int i = 0; i < len; i += 2) {
-//            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-//                    + Character.digit(s.charAt(i + 1), 16));
-//        }
-//        return data;
-//    }
 }

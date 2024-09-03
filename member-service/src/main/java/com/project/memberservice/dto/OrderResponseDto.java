@@ -1,11 +1,13 @@
 package com.project.memberservice.dto;
 
 import com.project.memberservice.entity.OrderStatusEnum;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 public class OrderResponseDto {
     private Long orderId;
     private int totalPrice;

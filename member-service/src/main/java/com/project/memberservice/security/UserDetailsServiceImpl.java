@@ -17,8 +17,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     /**
      * username(email)에 해당하는 UserDetails 조회
      *
-     * @param username
-     * @return
+     * @param username email
+     * @return UserDetails
      * @throws UsernameNotFoundException
      */
     @Override
@@ -30,20 +30,4 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         return new UserDetailsImpl(member);
     }
-
-//    /**
-//     * username(email)에 해당하는 MemberDto 조회 (-> memberId 조회)
-//     *
-//     * @param username
-//     * @return MemberDto
-//     */
-//    public UserInfoDto getMemberDetailsByEmail(String username) throws UsernameNotFoundException {
-//        Member member = memberRepository.findByEmail(username).orElse(null);
-//        if(member == null) {
-//            throw new UsernameNotFoundException(username);
-//        }
-//
-//        UserInfoDto userInfo = new ModelMapper().map(member, UserInfoDto.class);
-//        return userInfo;
-//    }
 }

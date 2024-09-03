@@ -17,7 +17,7 @@ public interface ProductServiceClient {
     @PostMapping("/reduce-stock")
     public ResponseEntity reduceStock(@RequestParam Long productId, @RequestParam int quantity);
 
-    /* 주문 실패 시 롤백 */
+    /* 재고 rollback (결제 실패, 주문 취소, 반품 승인) */
     @PostMapping("/rollback-stock")
     public ResponseEntity rollbackStock(@RequestParam Long productId, @RequestParam int quantity);
 

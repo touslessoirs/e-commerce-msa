@@ -2,8 +2,11 @@ package com.project.memberservice.dto;
 
 import com.project.memberservice.entity.UserRoleEnum;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class UserInfoDto {
     private Long memberId;
     private String email;

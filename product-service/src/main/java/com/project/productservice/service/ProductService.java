@@ -6,8 +6,8 @@ import com.project.productservice.entity.Product;
 import com.project.productservice.exception.CustomException;
 import com.project.productservice.exception.ErrorCode;
 import com.project.productservice.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -22,27 +22,19 @@ import java.util.stream.StreamSupport;
 @EnableAsync
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final RedisTemplate<String, String> redisTemplate;
-    private final RedissonClient redissonClient;
 
     private static final String STOCK_KEY_PREFIX = "stock_ID: ";
     private static final String PURCHASE_KEY_PREFIX = "purchase_start_time_ID: ";
 
-    public ProductService(ProductRepository productRepository,
-                          RedisTemplate redisTemplate,
-                          RedissonClient redissonClient) {
-        this.productRepository = productRepository;
-        this.redisTemplate = redisTemplate;
-        this.redissonClient = redissonClient;
-    }
-
     /**
      * 전체 상품 조회
      *
-     * @return Product List
+     * @return 전체 상품 목록
      */
     public List<ProductResponseDto> getAllProducts() {
         Iterable<Product> products = productRepository.findAll();
@@ -60,7 +52,7 @@ public class ProductService {
      * 상품 상세 조회
      *
      * @param productId
-     * @return ProductResponseDto
+     * @return 해당 상품의 상세 정보
      */
     public ProductResponseDto getProductDetail(Long productId) {
         Product product = productRepository.findById(productId)
@@ -74,7 +66,7 @@ public class ProductService {
      * 여러 상품의 상세 조회
      * 
      * @param productIdsRequestDto
-     * @return
+     * @return 해당 상품 목록의 상세 정보
      */
     public List<ProductResponseDto> getProductsDetails(ProductIdsRequestDto productIdsRequestDto) {
         List<Product> products = productRepository.findAllById(productIdsRequestDto.getProductIds());
@@ -83,12 +75,13 @@ public class ProductService {
                 .map(ProductResponseDto::new)
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * 주문 요청 - 주문 가능 여부 확인
      *
-     * @param productId
-     * @param quantity
+     * @param productId 확인 상품
+     * @param quantity 확인 수량
+     * @return 주문 가능 여부
      */
     @Transactional
     public boolean checkProductForOrder(Long productId, int quantity) {
@@ -104,8 +97,8 @@ public class ProductService {
     /**
      * 구매 가능 시간 확인
      *
-     * @param productId
-     * @return 구매 가능 여부
+     * @param productId 확인 상품
+     * @return 현재 구매 가능 시점인지 여부
      */
     public boolean checkPurchaseTime(Long productId) {
         String purchaseStartTimeKey = PURCHASE_KEY_PREFIX + productId;
@@ -127,16 +120,15 @@ public class ProductService {
             return true;
         }
 
-        log.error("PURCHASE_TIME_INVALID");
         throw new CustomException(ErrorCode.PURCHASE_TIME_INVALID);
     }
 
     /**
      * 주문 가능한 재고량인지 확인
      *
-     * @param productId
-     * @param quantity
-     * @return 재고 수량 충분한지 여부
+     * @param productId 확인 상품
+     * @param quantity 확인 수량
+     * @return 해당 상품의 재고 수량이 충분한지 여부
      */
     public boolean checkStock(Long productId, int quantity) {
         // 1. 캐시 조회
@@ -167,8 +159,8 @@ public class ProductService {
     /**
      * 재고 수량 감소
      *
-     * @param productId
-     * @param quantity
+     * @param productId 감소 상품
+     * @param quantity 감소 수량
      */
     @Transactional
     public void reduceStock(Long productId, int quantity) {
@@ -216,10 +208,11 @@ public class ProductService {
     }
 
     /**
-     * 재고 수량 증가(결제 실패 시 rollback)
+     * 재고 수량 증가
+     * 재고 rollback (주문 실패, 결제 실패, 주문 취소, 반품 승인)
      *
-     * @param productId
-     * @param quantity
+     * @param productId 증가(rollback) 상품
+     * @param quantity 증가(rollback) 수량
      */
     @Transactional
     public void rollbackStock(Long productId, int quantity) {
@@ -259,7 +252,7 @@ public class ProductService {
      * 특정 상품의 재고 조회
      *
      * @param productId
-     * @return stock
+     * @return 해당 상품의 재고 수량
      */
     public int getProductStock(Long productId) {
         Product product = productRepository.findById(productId)

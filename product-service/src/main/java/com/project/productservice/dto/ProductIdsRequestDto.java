@@ -1,10 +1,12 @@
 package com.project.productservice.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 public class ProductIdsRequestDto {
     private List<Long> productIds;
 }

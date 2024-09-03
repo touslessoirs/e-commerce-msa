@@ -4,23 +4,18 @@ import com.project.orderservice.dto.PaymentResponseDto;
 import com.project.orderservice.entity.Order;
 import com.project.orderservice.entity.Payment;
 import com.project.orderservice.entity.PaymentStatusEnum;
-import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.PaymentRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
-
-    public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository) {
-        this.paymentRepository = paymentRepository;
-        this.orderRepository = orderRepository;
-    }
 
     /**
      * 결제하기

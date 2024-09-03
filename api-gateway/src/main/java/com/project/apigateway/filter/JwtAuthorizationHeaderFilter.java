@@ -1,5 +1,6 @@
 package com.project.apigateway.filter;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -64,7 +65,20 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                 return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
             }
 
-            return chain.filter(exchange);
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(jwt)
+                    .getBody();
+
+            String memberId = claims.get("memberId", String.class);
+
+            // 요청 헤더에 memberId 추가
+            ServerHttpRequest modifiedRequest = request.mutate()
+                    .header("X-Member-Id", memberId)
+                    .build();
+
+            return chain.filter(exchange.mutate().request(modifiedRequest).build());
         };
     }
 
@@ -73,14 +87,14 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
         response.setStatusCode(httpStatus);
         log.error(err);
 
-        byte[] bytes = "The requested token is invalid.".getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = "유효하지 않은 JWT 토큰입니다.".getBytes(StandardCharsets.UTF_8);
         DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
         return response.writeWith(Flux.just(buffer));
     }
 
     private boolean isJwtValid(String jwt) {
         boolean returnValue = true;
-        String subject = null;  //memberId
+        String subject = null;  //username(email)
 
         try {
             JwtParser jwtParser = Jwts.parserBuilder()
@@ -88,8 +102,6 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     .build();
 
             subject = jwtParser.parseClaimsJws(jwt).getBody().getSubject();
-
-            log.info("subject: {}", subject);
         } catch (SignatureException ex) {
             log.error("유효하지 않은 JWT 서명입니다: {}", ex.getMessage());
             returnValue = false;
@@ -97,7 +109,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             log.error("JWT 토큰이 만료되었습니다: {}", ex.getMessage());
             returnValue = false;
         } catch (Exception ex) {
-            log.error("JWT 토큰 파싱 중 에러 발생: {}", ex.getMessage());
+            log.error("JWT 토큰 파싱 중 에러가 발생했습니다: {}", ex.getMessage());
             returnValue = false;
         }
 

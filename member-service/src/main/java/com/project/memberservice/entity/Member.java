@@ -2,16 +2,16 @@ package com.project.memberservice.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Builder
-@Data
 @Entity
-@Table(name = "users")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "users")
 public class Member extends Timestamped {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,13 +36,11 @@ public class Member extends Timestamped {
     @Column(nullable = false, length = 200)
     private String addressDetail;
 
-    @Builder.Default
     @Column(name = "is_verified")
-    private Integer isVerified = 0;
+    private Integer isVerified;
 
-    @Builder.Default
     @Column(name = "is_deleted")
-    private Integer isDeleted = 0;
+    private Integer isDeleted;
 
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
@@ -55,6 +53,8 @@ public class Member extends Timestamped {
         this.phone = phone;
         this.address = address;
         this.addressDetail = addressDetail;
+        isVerified = 0;
+        isDeleted = 0;
         this.role = role;
     }
 }

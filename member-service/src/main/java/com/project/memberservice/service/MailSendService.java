@@ -5,7 +5,6 @@ import com.project.memberservice.event.MailSendEvent;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
 import com.project.memberservice.repository.MemberRepository;
-import com.project.memberservice.security.UserDetailsImpl;
 import com.project.memberservice.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +18,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import javax.mail.MessagingException;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.MimeMessage;
 import java.util.Random;
 
@@ -49,12 +49,13 @@ public class MailSendService {
     /**
      * 메일 전송 정보 생성
      *
-     * @param userDetails
-     * @return 인증번호
+     * @param id memberId
      */
-    public void composeMail(UserDetailsImpl userDetails) {
+    public void composeMail(String id) {
+        Long memberId = Long.parseLong(id);
+
         // 이미 인증된 사용자인지 조회
-        Member member = memberRepository.findByEmail(userDetails.getUsername())
+        Member member = memberRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         if (member.getIsVerified() == 1) {
             throw new CustomException(ErrorCode.ALREADY_VERIFIED);
@@ -62,7 +63,7 @@ public class MailSendService {
 
         String authNumber = String.valueOf(makeRandomNumber());  // 인증번호 생성 메서드 호출
         String from = username + "@gmail.com";
-        String to = userDetails.getUsername();;
+        String to = member.getEmail();
         String title = "[e-commerce] 인증번호 안내";
         String content = "인증 번호는 <strong>" + authNumber + "</strong>입니다.";
 
@@ -81,7 +82,7 @@ public class MailSendService {
     /**
      * 메일 전송
      *
-     * @param mailSendEvent
+     * @param mailSendEvent 메일 전송에 필요한 정보
      */
     @KafkaListener(topics = MAIL_SEND_TOPIC)
     public void mailSend(MailSendEvent mailSendEvent) {
@@ -93,6 +94,8 @@ public class MailSendService {
             helper.setSubject(mailSendEvent.title());
             helper.setText(mailSendEvent.content(), true);   //html 설정
             mailSender.send(message);
+        } catch (AddressException e) {
+            throw new CustomException(ErrorCode.INVALID_EMAIL_FORMAT);
         } catch (MessagingException e) {
             e.printStackTrace();
         }
@@ -104,21 +107,21 @@ public class MailSendService {
      * 인증번호 검증
      * 입력한 인증번호에 해당하는 이메일(key)가 요청자와 일치하면 -> is_verified 컬럼의 값을 1(true)로 변경한다.
      *
-     * @param userDetails 사용자 email
+     * @param id memberId
      * @param authNumber 사용자가 입력한 인증번호
-     * @return
+     * @return 검증 결과
      */
-    public ResponseEntity checkAuthNumber(UserDetailsImpl userDetails, String authNumber) {
-        String email = userDetails.getUsername();
+    public ResponseEntity checkAuthNumber(String id, String authNumber) {
+        Long memberId = Long.parseLong(id);
+        Member member = memberRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        String email = member.getEmail();
         String storedAuthNum = redisUtil.getData(email);   //해당 email에 발급된 인증번호
 
         if (storedAuthNum == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 인증번호입니다.");
         } else if (storedAuthNum.equals(authNumber)) {  //인증번호 일치
-            //사용자 정보 조회
-            Member member = memberRepository.findByEmail(email)
-                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
             member.setIsVerified(1);  //true
             memberRepository.save(member);
 

@@ -8,6 +8,7 @@ import com.project.memberservice.entity.Member;
 import com.project.memberservice.entity.UserRoleEnum;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
+import com.project.memberservice.exception.FeignErrorDecoder;
 import com.project.memberservice.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,13 +37,15 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final OrderServiceClient orderServiceClient;
     private final CircuitBreakerFactory circuitBreakerFactory;
+    private final FeignErrorDecoder feignErrorDecoder;
 
     /**
      * 회원가입
      *
-     * @param memberRequestDto
-     * @return MemberResponseDto
+     * @param memberRequestDto 회원 가입 정보
+     * @return MemberResponseDto 회원 정보
      */
+    @Transactional
     public MemberResponseDto signUp(MemberRequestDto memberRequestDto) {
         try {
             // 1. 사용자 ROLE 확인
@@ -85,12 +89,14 @@ public class MemberService {
     /**
      * 사용자 정보 & 주문 내역 조회
      *
-     * @param memberId
-     * @return MemberDto
+     * @param id memberId
+     * @return MemberDto 사용자 정보 & 주문 내역
      */
-    public MemberResponseDto getMemberByMemberId(Long memberId) {
+    public MemberResponseDto getMemberByMemberId(String id) {
+        Long memberId = Long.parseLong(id);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
         MemberResponseDto memberResponseDto = new MemberResponseDto(member);
 
         //주문 내역 조회
@@ -110,7 +116,7 @@ public class MemberService {
     /**
      * 전체 사용자 조회
      *
-     * @return Member List
+     * @return Member 전체 사용자 목록
      */
     public Iterable<Member> getAllMembers() {
         return memberRepository.findAll();
@@ -119,11 +125,13 @@ public class MemberService {
     /**
      * 회원 정보 수정 (비밀번호 제외)
      *
-     * @param memberId
-     * @param memberRequestDto
-     * @return
+     * @param id memberId
+     * @param memberRequestDto 수정하려는 회원 정보
+     * @return MemberResponseDto 회원 정보
      */
-    public MemberResponseDto updateMember(Long memberId, MemberRequestDto memberRequestDto) {
+    @Transactional
+    public MemberResponseDto updateMember(String id, MemberRequestDto memberRequestDto) {
+        Long memberId = Long.parseLong(id);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -141,12 +149,15 @@ public class MemberService {
      * 회원 탈퇴
      * isDeleted -> 1(true)로 수정
      *
-     * @param memberId
+     * @param id memberId
      */
-    public void withdraw(Long memberId) {
+    @Transactional
+    public void withdraw(String id) {
+        Long memberId = Long.parseLong(id);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         member.setIsDeleted(1);
+        memberRepository.save(member);
     }
 }

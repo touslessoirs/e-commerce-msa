@@ -9,7 +9,10 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER-001", "주문을 찾을 수 없습니다."),
     ORDER_FAILED(HttpStatus.BAD_REQUEST, "ORDER-002", "주문에 실패했습니다."),
-    ORDER_REQUEST_DENIED(HttpStatus.BAD_REQUEST, "ORDER-002", "주문 요청이 거부되었습니다."),
+    ORDER_REQUEST_DENIED(HttpStatus.BAD_REQUEST, "ORDER-003", "주문 요청이 거부되었습니다."),
+    CANCELLATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER-004", "해당 주문은 취소할 수 없습니다."),
+    RETURN_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER-005", "해당 주문은 반품 신청이 불가능합니다."),
+    ORDER_IS_NOT_RETURN_REQUESTED(HttpStatus.BAD_REQUEST, "ORDER-006", "반품 신청이 접수되지 않은 상태입니다."),
 
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT-001", "결제에 실패했습니다."),
 

@@ -11,9 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
+
+    /**
+     * 상품 조회 시 비관적 락 걸기
+     * 
+     * @param productId
+     * @return
+     */
     @Transactional(readOnly = false)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :productId")
     Optional<Product> findByIdWithLock(@Param("productId") Long productId);
-
 }

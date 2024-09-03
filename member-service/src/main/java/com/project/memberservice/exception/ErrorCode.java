@@ -14,11 +14,14 @@ public enum ErrorCode {
     PHONE_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER-005", "이미 사용 중인 전화번호입니다."),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER-006", "이미 사용 중인 이메일입니다."),
     ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "USER-007", "이미 인증된 사용자입니다."),
+    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "USER-008", "잘못된 이메일 주소 형식입니다."),
 
     INVALID_ADMIN_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 관리자 토큰입니다."),
 
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER-001", "주문을 찾을 수 없습니다."),
+
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT-001", "상품을 찾을 수 없습니다."),
-    
+
     CART_NOT_FOUND(HttpStatus.NOT_FOUND, "CART-001", "장바구니 정보를 찾을 수 없습니다."),
     CART_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "CART-002", "장바구니에서 해당 상품의 정보를 찾을 수 없습니다."),
 

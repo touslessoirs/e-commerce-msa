@@ -2,28 +2,21 @@ package com.project.memberservice.service;
 
 import com.project.memberservice.client.OrderServiceClient;
 import com.project.memberservice.exception.FeignErrorDecoder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class OrderErrorfulService {
 
     private final OrderServiceClient orderServiceClient;
     private final FeignErrorDecoder feignErrorDecoder;
     private final CircuitBreakerFactory circuitBreakerFactory;
 
-    public OrderErrorfulService(OrderServiceClient orderServiceClient,
-                                FeignErrorDecoder feignErrorDecoder,
-                                CircuitBreakerFactory circuitBreakerFactory) {
-        this.orderServiceClient = orderServiceClient;
-        this.feignErrorDecoder = feignErrorDecoder;
-        this.circuitBreakerFactory = circuitBreakerFactory;
-    }
-
     public ResponseEntity<String> callErrorfulCase1() {
-//        return orderServiceClient.getCase1Response();
         CircuitBreaker circuitBreaker = circuitBreakerFactory.create("circuitBreaker");
         return circuitBreaker.run(() -> orderServiceClient.getCase1Response(),
                 throwable -> ResponseEntity.status(500).body("Fallback response for case1"));

@@ -41,11 +41,4 @@ public class KafkaConfig {
         return new DefaultKafkaProducerFactory<>(config);
     }
 
-//    @Bean
-//    public ConcurrentKafkaListenerContainerFactory<String, OrderRequestEvent> kafkaListenerContainerFactory(ConsumerFactory<String, OrderRequestEvent> consumerFactory) {
-//        ConcurrentKafkaListenerContainerFactory<String, OrderRequestEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
-//        factory.setConsumerFactory(consumerFactory);
-//        factory.setRecordMessageConverter(new StringJsonMessageConverter());
-//        return factory;
-//    }
 }

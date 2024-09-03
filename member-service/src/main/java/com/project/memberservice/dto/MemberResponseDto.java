@@ -2,12 +2,14 @@ package com.project.memberservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.project.memberservice.entity.Member;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class MemberResponseDto {
     private Long memberId;

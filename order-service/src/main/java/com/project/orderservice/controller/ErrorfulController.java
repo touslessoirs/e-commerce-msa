@@ -9,13 +9,13 @@ import java.time.LocalTime;
 import java.util.Random;
 
 /**
- * feign client 통신으로 order service에 요청 전송
+ * 임의로 Error 발생시키기 위한 Controller
  */
 @RestController
 @RequestMapping("/errorful")
 public class ErrorfulController {
 
-    /* 5%의 확률로 HTTP 500 상태 코드를 반환 */
+    /* 특정 확률로 HTTP 500 상태 코드를 반환 */
     @GetMapping("/case1")
     public ResponseEntity<String> case1() {
 //        if (new Random().nextInt(100) < 5) {  //5%

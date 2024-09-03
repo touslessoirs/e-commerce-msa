@@ -1,15 +1,18 @@
 package com.project.memberservice.service;
 
 import com.project.memberservice.client.ProductServiceClient;
-import com.project.memberservice.dto.*;
+import com.project.memberservice.dto.CartProductRequestDto;
+import com.project.memberservice.dto.CartRequestDto;
+import com.project.memberservice.dto.ProductIdsRequestDto;
+import com.project.memberservice.dto.ProductResponseDto;
 import com.project.memberservice.entity.Cart;
 import com.project.memberservice.entity.CartProduct;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
+import com.project.memberservice.exception.FeignErrorDecoder;
 import com.project.memberservice.repository.CartProductRepository;
 import com.project.memberservice.repository.CartRepository;
-import com.project.memberservice.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,11 +30,12 @@ public class CartService {
     private final CartRepository cartRepository;
     private final CartProductRepository cartProductRepository;
     private final ProductServiceClient productServiceClient;
+    private final FeignErrorDecoder feignErrorDecoder;
 
     /**
-     * 장바구니 생성
+     * 장바구니 생성(회원가입)
      *
-     * @param member
+     * @param member 장바구니를 생성할 회원
      */
     @Transactional
     public void createCart(Member member) {
@@ -45,12 +49,12 @@ public class CartService {
      * - 해당 상품 없음 -> 상품 등록
      * - 해당 상품 있음 -> 상품 수량 수정
      *
-     * @param userDetails
-     * @param cartRequestDto 장바구니에 추가할 상품 Listx
+     * @param id memberId
+     * @param cartRequestDto 장바구니에 추가할 상품 목록
      */
     @Transactional
-    public void addCart(UserDetailsImpl userDetails, CartRequestDto cartRequestDto) {
-        Long memberId = userDetails.getMember().getMemberId();
+    public void addCart(String id, CartRequestDto cartRequestDto) {
+        Long memberId = Long.parseLong(id);
 
         // 1. 장바구니 조회
         Cart cart = cartRepository.findByMember_MemberId(memberId)
@@ -70,6 +74,9 @@ public class CartService {
                     productServiceClient.getProductDetail(cartProductRequestDto.getProductId()).getBody();
             int availableStock = productResponseDto.getStock(); // 최대 추가 가능 수량
 
+            if (availableStock<=0) {
+                continue;   // 재고 0개인 상품은 추가하지 않음
+            }
             // 추가할 수량이 재고 수량보다 많은 경우 조정
             if (quantityToAdd > availableStock) {
                 log.info("재고 부족으로 인해 수량이 조정되었습니다. 요청: {}, 재고: {}", quantityToAdd, availableStock);
@@ -95,16 +102,16 @@ public class CartService {
     /**
      * 장바구니 (수량)수정
      *
-     * @param userDetails
+     * @param id memberId
      */
-    public void updateQuantity(UserDetailsImpl userDetails, CartRequestDto cartRequestDto, Boolean isIncrease) {
-        Long memberId = userDetails.getMember().getMemberId();
+    public void updateQuantity(String id, CartRequestDto cartRequestDto, Boolean isIncrease) {
+        Long memberId = Long.parseLong(id);
         Cart cart = cartRepository.findByMember_MemberId(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CART_NOT_FOUND));
 
         if (isIncrease) {
             // 수량 증가 -> addCart 호출
-            addCart(userDetails, cartRequestDto);
+            addCart(id, cartRequestDto);
         } else {
             // 수량 감소
             List<CartProductRequestDto> cartProducts = cartRequestDto.getCartProducts();    // 수정할 상품 목록
@@ -139,11 +146,13 @@ public class CartService {
     /**
      * 장바구니 삭제
      *
-     * @param userDetails
-     * @param cartProductIdList
+     * @param id memberId
+     * @param cartProductIdList 장바구니에서 삭제할 상품 목록
      */
-    public void deleteProduct(UserDetailsImpl userDetails, List<Long> cartProductIdList) {
-        Long memberId = userDetails.getMember().getMemberId();
+    public void deleteProduct(String id, List<Long> cartProductIdList) {
+        log.info("id: {}, productIds size: {}", id, cartProductIdList.size());
+
+        Long memberId = Long.parseLong(id);
         Cart cart = cartRepository.findByMember_MemberId(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CART_NOT_FOUND));
 
@@ -159,11 +168,11 @@ public class CartService {
     /**
      * 장바구니 조회
      *
-     * @param userDetails
-     * @return List<ProductResponseDto> (상품 정보 포함)
+     * @param id memberId
+     * @return List<ProductResponseDto> 장바구니에 담긴 상품 목록(상품 정보 포함)
      */
-    public List<ProductResponseDto> getCart(UserDetailsImpl userDetails) {
-        Long memberId = userDetails.getMember().getMemberId();
+    public List<ProductResponseDto> getCart(String id) {
+        Long memberId = Long.parseLong(id);
 
         Cart cart = cartRepository.findByMember_MemberId(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CART_NOT_FOUND));

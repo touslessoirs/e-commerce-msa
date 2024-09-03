@@ -11,6 +11,7 @@ import com.project.orderservice.event.PaymentResponseEvent;
 import com.project.orderservice.event.ShippingRequestEvent;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
+import com.project.orderservice.exception.FeignErrorDecoder;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.ShippingRepository;
@@ -31,65 +32,24 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FlashSaleService {
 
-//    private static final String ORDER_REQUEST_TOPIC = "order-request-topic";
-//    private static final String TEST_TOPIC = "test-topic";
-//    private static final String TEST_TOPIC_2 = "test-topic-2";
     private static final String PAYMENT_REQUEST_TOPIC = "payment-request-topic";
     private static final String PAYMENT_RESPONSE_TOPIC = "payment-response-topic";
     private static final String SHIPPING_TOPIC = "shipping-topic";
-//    private static final String ROLLBACK_TOPIC = "rollback-topic";
 
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ShippingRepository shippingRepository;
-//    private final PaymentRepository paymentRepository;
-//    private final PaymentService paymentService;
     private final ProductServiceClient productServiceClient;
-//    private final FeignErrorDecoder feignErrorDecoder;
     private final RedissonClient redissonClient;
+    private final FeignErrorDecoder feignErrorDecoder;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
-//    private final ConcurrentHashMap<Long, CompletableFuture<Boolean>> pendingResponses = new ConcurrentHashMap<>();
 
-//    /**
-//     * kafka event 발행
-//     *
-//     * @param memberId
-//     * @param orderRequest
-//     */
-//    public void produceEvent(Long memberId, FlashSaleRequestDto orderRequest) {
-//        OrderProductRequestDto orderProductRequestDto = orderRequest.getOrderProduct();
-//
-//        CompletableFuture<Boolean> future = new CompletableFuture<>();
-//        pendingResponses.put(orderProductRequestDto.getProductId(), future);
-//
-//        sendEvent(TEST_TOPIC,
-//                new OrderRequestEvent(
-//                        orderProductRequestDto.getProductId(),
-//                        orderProductRequestDto.getQuantity()
-//                )
-//        );
-//    }
-//
-//    private void sendEvent(String topic, Object event) {
-//        kafkaTemplate.send(topic, event);
-//    }
-//
-//    /**
-//     * kafka event 수신
-//     *
-//     * @param isAvailable
-//     */
-//    @KafkaListener(topics = TEST_TOPIC_2)
-//    public void listenEvent(Boolean isAvailable) {
-//        log.info("Received OrderRequestEvent: isAvailable: {}", isAvailable);
-//    }
-//
     /**
      * 구매 가능 시간 & 재고 확인
      *
-     * @param flashSaleRequestDto
-     * @return
+     * @param flashSaleRequestDto 주문 정보
+     * @return 주문하고자 하는 상품이 주문 가능한지 여부
      */
     @Transactional
     public boolean requestOrder(FlashSaleRequestDto flashSaleRequestDto) {
@@ -109,12 +69,14 @@ public class FlashSaleService {
     /**
      * 주문하기
      *
-     * @param memberId
-     * @param flashSaleRequestDto
-     * @return
+     * @param id memberId
+     * @param flashSaleRequestDto 주문 정보
+     * @return 완료된 주문
      */
     @Transactional
-    public OrderResponseDto createOrder(Long memberId, FlashSaleRequestDto flashSaleRequestDto) {
+    public OrderResponseDto createOrder(String id, FlashSaleRequestDto flashSaleRequestDto) {
+        Long memberId = Long.parseLong(id);
+
         Order savedOrder = null;
         PaymentResponseDto savedPayment = null;
 
@@ -150,6 +112,11 @@ public class FlashSaleService {
         return new OrderResponseDto(savedOrder);
     }
 
+    /**
+     * 결제 완료 이벤트 수신
+     * 
+     * @param event 결제 완료 정보
+     */
     @KafkaListener(topics = PAYMENT_RESPONSE_TOPIC)
     public void handlePaymentResultEvent(PaymentResponseEvent event) {
 
@@ -159,9 +126,7 @@ public class FlashSaleService {
             }
 
             // order status update
-            log.info("{} listen", event.status());
             Order paidOrder = event.order();
-
             if (event.status() == PaymentStatusEnum.PAYMENT_COMPLETED) {
                 // 결제 성공
                 log.info("결제 성공");
@@ -185,8 +150,8 @@ public class FlashSaleService {
      * 주문 정보 저장
      *
      * @param memberId
-     * @param flashSaleRequestDto
-     * @return
+     * @param flashSaleRequestDto 주문 정보
+     * @return 저장 완료한 주문
      */
     public Order saveOrder(Long memberId, FlashSaleRequestDto flashSaleRequestDto) {
         OrderProductRequestDto orderProductDto = flashSaleRequestDto.getOrderProduct();
@@ -223,12 +188,10 @@ public class FlashSaleService {
     /**
      * 결제 실패 시 rollback
      *
-     * @param orderProductDto
+     * @param orderProductDto rollback해야하는 상품 정보
      */
     @Transactional
     public void rollbackStock(OrderProductRequestDto orderProductDto) {
-        log.info("rollback : {}", orderProductDto.getProductId());
-
         String lockKey = "order_lock_product: " + orderProductDto.getProductId();
         RLock lock = redissonClient.getLock(lockKey);
 
@@ -242,15 +205,12 @@ public class FlashSaleService {
     }
 
     /**
-     * 배송 정보 저장
+     * 배송 정보 저장 이벤트 수신
      *
-     * @param event
+     * @param event 배송 정보
      */
     @KafkaListener(topics = SHIPPING_TOPIC)
     public void saveShipping(ShippingRequestEvent event) {
-
-        log.info("address : "+event.address());
-
         Shipping shipping = new Shipping(
                 event.address(),
                 event.addressDetail(),

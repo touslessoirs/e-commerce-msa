@@ -5,9 +5,9 @@ import com.project.productservice.dto.ProductResponseDto;
 import com.project.productservice.service.ProductService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,22 +17,21 @@ import java.util.List;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/")
 public class ProductController {
 
     @Value("${greeting.message}")
     private String greeting;
-    private final Environment env;
-    private final ProductService productService;
 
-    public ProductController(Environment env, ProductService memberService) {
-        this.env = env;
-        this.productService = memberService;
-    }
+    @Value("${server.port}")
+    private String port;
+
+    private final ProductService productService;
 
     @GetMapping("/health-check")
     public String status() {
-        return String.format("PRODUCT SERVICE Running on PORT %s", env.getProperty("server.port"));
+        return String.format("PRODUCT SERVICE Running on PORT %s", port);
 
     }
 
@@ -66,29 +65,6 @@ public class ProductController {
         List<ProductResponseDto> productDetails = productService.getProductsDetails(productIds);
         return ResponseEntity.ok(productDetails);
     }
-
-    /* 재고 수량 & 구매 가능 시간 확인 */
-//    @GetMapping("/check-product/{productId}")
-//    public boolean isProductPurchasable(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
-//        log.info("isProductPurchasable 호출");
-//        return productService.isProductPurchasable(productId, quantity);
-//    }
-
-//    /* 재고 수량 변경 */
-//    @PutMapping("/{productId}")
-//    public void rollbackStock(@PathVariable("productId") Long productId, @RequestParam("quantity") int quantity) {
-//        log.info("rollbackStock 호출");
-//        productService.rollbackStock(productId, quantity);
-//    }
-
-
-    /* 재고 수량 & 구매 가능 시간 확인 & 재고 감소 */
-//    @PostMapping("/check-product")
-//    public ResponseEntity<Boolean> checkProductForOrder(@RequestParam Long productId, @RequestParam int quantity) {
-//        log.info("checkProductForOrder 호출");
-//        boolean isAvailable = productService.checkProductForOrder(productId, quantity);
-//        return ResponseEntity.ok(isAvailable);
-//    }
 
     /* 주문 요청 - 주문 가능 여부 확인 */
     @GetMapping("/check-product")
@@ -125,9 +101,4 @@ public class ProductController {
         return ResponseEntity.ok("Stock rolled back successfully.");
     }
 
-    /* 특정 상품의 재고 조회 */
-    public ResponseEntity<Integer> getProductStock(@PathVariable Long productId) {
-        int stock = productService.getProductStock(productId);
-        return ResponseEntity.ok(stock);
-    }
 }

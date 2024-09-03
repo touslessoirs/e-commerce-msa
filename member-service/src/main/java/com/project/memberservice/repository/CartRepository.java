@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
-    //회원 ID를 사용하여 장바구니 조회
+    /* 해당 회원의 장바구니 조회 */
     Optional<Cart> findByMember_MemberId(Long userId);
 }

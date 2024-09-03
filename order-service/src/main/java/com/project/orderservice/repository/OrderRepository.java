@@ -3,18 +3,27 @@ package com.project.orderservice.repository;
 import com.project.orderservice.entity.Order;
 import com.project.orderservice.entity.OrderStatusEnum;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     Iterable<Order> findByMemberId(Long memberId);
 
-//    @Modifying
-//    @Query("UPDATE Order o SET o.status = 'ORDER_FAILED' WHERE o.id = :orderId")
-//    void cancelOrder(@Param("orderId") Long orderId);
+    /**
+     * @param orderStatusEnum 주문상태
+     * @param localDateTime 기준 시점
+     * @return 해당 조건에 맞는 주문 목록
+     */
+    List<Order> findAllByStatusAndModifiedAtBefore(OrderStatusEnum orderStatusEnum, LocalDateTime localDateTime);
 
-    @Modifying
-    @Query("UPDATE Order o SET o.status = :status WHERE o.id = :orderId")
-    void updateOrderStatus(@Param("orderId") Long orderId, @Param("status") OrderStatusEnum status);
+    /**
+     * 특정 회원의 특정 주문 조회
+     * 
+     * @param orderId
+     * @param memberId
+     * @return 해당 조건에 맞는 주문
+     */
+    Optional<Order> findByOrderIdAndMemberId(Long orderId, Long memberId);
 }

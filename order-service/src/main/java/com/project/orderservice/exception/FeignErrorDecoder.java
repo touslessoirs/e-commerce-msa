@@ -2,20 +2,17 @@ package com.project.orderservice.exception;
 
 import feign.Response;
 import feign.codec.ErrorDecoder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 public class FeignErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
         switch (response.status()) {
             case 400:
-//                if (methodKey.contains("updateStock")) {
-//                    return new CustomException(ErrorCode.STOCK_INSUFFICIENT);
-//                } else if (methodKey.contains("isProductPurchasable") || methodKey.contains("updateStock")) {
-//                    return new CustomException(ErrorCode.STOCK_INSUFFICIENT);
-//                }
                 if (methodKey.contains("checkProductForOrder")) {
                     return new CustomException(ErrorCode.STOCK_INSUFFICIENT);
                 }

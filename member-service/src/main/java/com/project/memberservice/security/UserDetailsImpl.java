@@ -21,6 +21,10 @@ public class UserDetailsImpl implements UserDetails {
         return member;
     }
 
+    public Long getMemberId() {
+        return member.getMemberId();
+    }
+
     @Override
     public String getPassword() {
         return member.getPassword();
