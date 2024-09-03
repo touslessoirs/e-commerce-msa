@@ -5,11 +5,10 @@ import com.project.orderservice.dto.*;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
-import com.project.orderservice.exception.FeignErrorDecoder;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
-import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -23,33 +22,17 @@ import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ShippingRepository shippingRepository;
-    private final PaymentRepository paymentRepository;
+//    private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
     private final ProductServiceClient productServiceClient;
-    private final FeignErrorDecoder feignErrorDecoder;
+//    private final FeignErrorDecoder feignErrorDecoder;
     private final RedissonClient redissonClient;
-
-    public OrderService(OrderRepository orderRepository, OrderProductRepository orderProductRepository,
-                        ShippingRepository shippingRepository, PaymentRepository paymentRepository,
-                        PaymentService paymentService,
-                        ProductServiceClient productServiceClient,
-                        FeignErrorDecoder feignErrorDecoder,
-                        RedissonClient redissonClient
-    ) {
-        this.orderRepository = orderRepository;
-        this.orderProductRepository = orderProductRepository;
-        this.shippingRepository = shippingRepository;
-        this.paymentRepository = paymentRepository;
-        this.paymentService = paymentService;
-        this.productServiceClient = productServiceClient;
-        this.feignErrorDecoder = feignErrorDecoder;
-        this.redissonClient = redissonClient;
-    }
 
     /**
      * 구매 가능 시간 & 재고 확인
@@ -165,6 +148,11 @@ public class OrderService {
         return saveOrder;
     }
 
+    /**
+     * 결제 실패 시 rollback
+     *
+     * @param orderProductRequestList
+     */
     @Transactional
     public void rollbackStock(List<OrderProductRequestDto> orderProductRequestList) {
         log.info("PAYMENT_FAILED 4");

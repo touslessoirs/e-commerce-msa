@@ -1,17 +1,18 @@
 package com.project.orderservice.service;
 
 import com.project.orderservice.client.ProductServiceClient;
-import com.project.orderservice.dto.*;
+import com.project.orderservice.dto.FlashSaleRequestDto;
+import com.project.orderservice.dto.OrderProductRequestDto;
+import com.project.orderservice.dto.OrderResponseDto;
+import com.project.orderservice.dto.PaymentResponseDto;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.event.PaymentRequestEvent;
 import com.project.orderservice.event.PaymentResponseEvent;
 import com.project.orderservice.event.ShippingRequestEvent;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
-import com.project.orderservice.exception.FeignErrorDecoder;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
-import com.project.orderservice.repository.PaymentRepository;
 import com.project.orderservice.repository.ShippingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -38,19 +37,19 @@ public class FlashSaleService {
     private static final String PAYMENT_REQUEST_TOPIC = "payment-request-topic";
     private static final String PAYMENT_RESPONSE_TOPIC = "payment-response-topic";
     private static final String SHIPPING_TOPIC = "shipping-topic";
-    private static final String ROLLBACK_TOPIC = "rollback-topic";
+//    private static final String ROLLBACK_TOPIC = "rollback-topic";
 
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ShippingRepository shippingRepository;
-    private final PaymentRepository paymentRepository;
-    private final PaymentService paymentService;
+//    private final PaymentRepository paymentRepository;
+//    private final PaymentService paymentService;
     private final ProductServiceClient productServiceClient;
-    private final FeignErrorDecoder feignErrorDecoder;
+//    private final FeignErrorDecoder feignErrorDecoder;
     private final RedissonClient redissonClient;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final ConcurrentHashMap<Long, CompletableFuture<Boolean>> pendingResponses = new ConcurrentHashMap<>();
+//    private final ConcurrentHashMap<Long, CompletableFuture<Boolean>> pendingResponses = new ConcurrentHashMap<>();
 
 //    /**
 //     * kafka event 발행

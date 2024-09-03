@@ -1,5 +1,6 @@
 package com.project.productservice.service;
 
+import com.project.productservice.dto.ProductIdsRequestDto;
 import com.project.productservice.dto.ProductResponseDto;
 import com.project.productservice.entity.Product;
 import com.project.productservice.exception.CustomException;
@@ -69,6 +70,20 @@ public class ProductService {
         return productResponseDto;
     }
 
+    /**
+     * 여러 상품의 상세 조회
+     * 
+     * @param productIdsRequestDto
+     * @return
+     */
+    public List<ProductResponseDto> getProductsDetails(ProductIdsRequestDto productIdsRequestDto) {
+        List<Product> products = productRepository.findAllById(productIdsRequestDto.getProductIds());
+
+        return products.stream()
+                .map(ProductResponseDto::new)
+                .collect(Collectors.toList());
+    }
+    
     /**
      * 주문 요청 - 주문 가능 여부 확인
      *
@@ -251,4 +266,5 @@ public class ProductService {
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
         return product.getStock();
     }
+
 }

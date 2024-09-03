@@ -14,6 +14,7 @@ public class ProductResponseDto {
     private String category;
 
     public ProductResponseDto(Product product) {
+        this.productId = product.getProductId();
         this.name = product.getName();
         this.unitPrice = product.getUnitPrice();
         this.stock = product.getStock();

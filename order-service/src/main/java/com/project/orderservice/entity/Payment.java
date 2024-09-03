@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "payments")
 @NoArgsConstructor
 @AllArgsConstructor
-public class Payment {
+public class Payment extends Timestamped {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

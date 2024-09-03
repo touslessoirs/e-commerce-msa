@@ -1,5 +1,6 @@
 package com.project.productservice.controller;
 
+import com.project.productservice.dto.ProductIdsRequestDto;
 import com.project.productservice.dto.ProductResponseDto;
 import com.project.productservice.service.ProductService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -57,6 +58,13 @@ public class ProductController {
         log.info("getProductDetail 호출");
         ProductResponseDto productResponseDto = productService.getProductDetail(productId);
         return ResponseEntity.ok(productResponseDto);
+    }
+
+    /* 여러 상품의 상세 조회 */
+    @PostMapping("/details")
+    public ResponseEntity<List<ProductResponseDto>> getProductsDetails(@RequestBody ProductIdsRequestDto productIds) {
+        List<ProductResponseDto> productDetails = productService.getProductsDetails(productIds);
+        return ResponseEntity.ok(productDetails);
     }
 
     /* 재고 수량 & 구매 가능 시간 확인 */

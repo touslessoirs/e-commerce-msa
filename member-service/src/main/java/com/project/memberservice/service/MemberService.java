@@ -8,13 +8,12 @@ import com.project.memberservice.entity.Member;
 import com.project.memberservice.entity.UserRoleEnum;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
-import com.project.memberservice.exception.FeignErrorDecoder;
 import com.project.memberservice.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
-import org.springframework.core.env.Environment;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,31 +24,17 @@ import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MemberService {
 
     @Value("${admin.token}")
     private String ADMIN_TOKEN;
 
+    private final CartService cartService;
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Environment env;
     private final OrderServiceClient orderServiceClient;
-    private final FeignErrorDecoder feignErrorDecoder;
     private final CircuitBreakerFactory circuitBreakerFactory;
-
-    public MemberService(MemberRepository memberRepository,
-                         PasswordEncoder passwordEncoder,
-                         Environment env,
-                         OrderServiceClient orderServiceClient,
-                         FeignErrorDecoder feignErrorDecoder,
-                         CircuitBreakerFactory circuitBreakerFactory) {
-        this.memberRepository = memberRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.env = env;
-        this.orderServiceClient = orderServiceClient;
-        this.feignErrorDecoder = feignErrorDecoder;
-        this.circuitBreakerFactory = circuitBreakerFactory;
-    }
 
     /**
      * 회원가입
@@ -59,10 +44,10 @@ public class MemberService {
      */
     public MemberResponseDto signUp(MemberRequestDto memberRequestDto) {
         try {
-            // 사용자 ROLE 확인
+            // 1. 사용자 ROLE 확인
             UserRoleEnum role = UserRoleEnum.USER;  //default
 
-            //관리자 권한으로 가입 요청
+            // 2. 관리자 권한으로 가입 요청
             if (memberRequestDto.isAdmin()) {
                 if (!ADMIN_TOKEN.equals(memberRequestDto.getAdminToken())) {
                     throw new CustomException(ErrorCode.INVALID_ADMIN_TOKEN);
@@ -71,6 +56,7 @@ public class MemberService {
                 role = UserRoleEnum.ADMIN;
             }
 
+            // 3. 회원 정보 저장
             Member member = new Member(
                     memberRequestDto.getEmail(),
                     passwordEncoder.encode(memberRequestDto.getPassword()),
@@ -82,6 +68,9 @@ public class MemberService {
             );
 
             Member savedMember = memberRepository.save(member);
+
+            // 4. 장바구니 생성
+            cartService.createCart(member);
 
             MemberResponseDto memberResponseDto = new MemberResponseDto(savedMember);
             return memberResponseDto;
@@ -127,4 +116,37 @@ public class MemberService {
         return memberRepository.findAll();
     }
 
+    /**
+     * 회원 정보 수정 (비밀번호 제외)
+     *
+     * @param memberId
+     * @param memberRequestDto
+     * @return
+     */
+    public MemberResponseDto updateMember(Long memberId, MemberRequestDto memberRequestDto) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        member.setEmail(memberRequestDto.getEmail());
+        member.setName(memberRequestDto.getName());
+        member.setPhone(memberRequestDto.getPhone());
+        member.setAddress(memberRequestDto.getAddress());
+        member.setAddressDetail(memberRequestDto.getAddressDetail());
+
+        Member updatedMember = memberRepository.save(member);
+        return new MemberResponseDto(updatedMember);
+    }
+
+    /**
+     * 회원 탈퇴
+     * isDeleted -> 1(true)로 수정
+     *
+     * @param memberId
+     */
+    public void withdraw(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        member.setIsDeleted(1);
+    }
 }

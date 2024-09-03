@@ -79,4 +79,19 @@ public class MemberController {
 
         return ResponseEntity.status(HttpStatus.OK).body(memberResponseDto);
     }
+
+    /* 회원 정보 수정 (비밀번호 제외) */
+    @PutMapping("/members/{memberId}")
+    public ResponseEntity<MemberResponseDto> modifyUser(@PathVariable("memberId") Long memberId,
+                                                        @Valid @RequestBody MemberRequestDto memberRequestDto) {
+        MemberResponseDto updatedMember = memberService.updateMember(memberId, memberRequestDto);
+        return ResponseEntity.status(HttpStatus.OK).body(updatedMember);
+    }
+
+    /* 회원 탈퇴 */
+    @PutMapping("/withdraw/{memberId}")
+    public ResponseEntity deleteMember(@PathVariable("memberId") Long memberId) {
+        memberService.withdraw(memberId);
+        return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
+    }
 }

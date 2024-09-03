@@ -1,7 +1,6 @@
 package com.project.memberservice.exception;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,11 +28,11 @@ public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
 //        return ErrorResponseEntity.toResponseEntity(errorCode);
 //    }
 
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ErrorResponseEntity> handleDataAccessException(DataAccessException e) {
-        ErrorCode errorCode = ErrorCode.DATA_ACCESS_EXCEPTION;
-        return ErrorResponseEntity.toResponseEntity(errorCode);
-    }
+//    @ExceptionHandler(DataAccessException.class)
+//    public ResponseEntity<ErrorResponseEntity> handleDataAccessException(DataAccessException e) {
+//        ErrorCode errorCode = ErrorCode.DATA_ACCESS_EXCEPTION;
+//        return ErrorResponseEntity.toResponseEntity(errorCode);
+//    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponseEntity> handleIllegalArgumentException(IllegalArgumentException e) {

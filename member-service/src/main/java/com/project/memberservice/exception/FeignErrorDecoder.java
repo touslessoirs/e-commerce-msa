@@ -18,9 +18,11 @@ public class FeignErrorDecoder implements ErrorDecoder {
                     return new ResponseStatusException(HttpStatusCode.valueOf(response.status()),
                             "해당 회원의 주문 정보가 없습니다.");
                 }
+                if(methodKey.contains("getProductDetail")) {
+                    return new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
+                }
                 break;
-            case 500:
-                //InternalServerErrorException
+            case 500:   //InternalServerErrorException
                 break;
             default:
                 return new Exception(response.reason());
