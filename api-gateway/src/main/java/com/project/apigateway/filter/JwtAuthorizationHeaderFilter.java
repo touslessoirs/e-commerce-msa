@@ -1,5 +1,7 @@
 package com.project.apigateway.filter;
 
+//import com.project.apigateway.feign.TokenServiceClient;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
@@ -11,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.core.env.Environment;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,21 +30,16 @@ import java.util.Base64;
 @Component
 @Slf4j
 public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<JwtAuthorizationHeaderFilter.Config> {
-    Environment env;
 
     @Value("${jwt.secret_key}") // Base64 Encode 한 SecretKey
     private String secretKey;
+
     private Key key;
 
     @PostConstruct
     public void init() {
         byte[] secretKeyBytes = Base64.getDecoder().decode(secretKey);
         key = Keys.hmacShaKeyFor(secretKeyBytes);
-    }
-
-    public JwtAuthorizationHeaderFilter(Environment env) {
-        super(Config.class);
-        this.env = env;
     }
 
     public static class Config {

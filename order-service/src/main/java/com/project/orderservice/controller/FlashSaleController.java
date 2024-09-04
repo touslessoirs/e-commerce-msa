@@ -21,7 +21,7 @@ public class FlashSaleController {
     private final FlashSaleService flashSaleService;
 
     /* 주문 요청 - 주문 가능 여부 확인 및 주문하기 */
-    @PostMapping("/{memberId}/flash-sale/request")
+    @PostMapping("/flash-sale/request")
     public ResponseEntity<OrderResponseDto> requestOrder(@RequestHeader("X-Member-Id") String id,
                                                          @Valid @RequestBody FlashSaleRequestDto flashSaleRequestDto) {
 

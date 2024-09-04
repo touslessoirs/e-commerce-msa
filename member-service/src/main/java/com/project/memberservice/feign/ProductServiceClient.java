@@ -1,4 +1,4 @@
-package com.project.memberservice.client;
+package com.project.memberservice.feign;
 
 import com.project.memberservice.dto.ProductIdsRequestDto;
 import com.project.memberservice.dto.ProductResponseDto;

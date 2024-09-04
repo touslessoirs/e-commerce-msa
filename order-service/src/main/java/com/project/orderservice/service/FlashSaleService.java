@@ -1,6 +1,5 @@
 package com.project.orderservice.service;
 
-import com.project.orderservice.client.ProductServiceClient;
 import com.project.orderservice.dto.FlashSaleRequestDto;
 import com.project.orderservice.dto.OrderProductRequestDto;
 import com.project.orderservice.dto.OrderResponseDto;
@@ -12,6 +11,7 @@ import com.project.orderservice.event.ShippingRequestEvent;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
 import com.project.orderservice.exception.FeignErrorDecoder;
+import com.project.orderservice.feign.ProductServiceClient;
 import com.project.orderservice.repository.OrderProductRepository;
 import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.ShippingRepository;

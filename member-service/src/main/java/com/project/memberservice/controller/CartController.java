@@ -36,7 +36,7 @@ public class CartController {
         return ResponseEntity.ok("장바구니가 수정되었습니다.");
     }
 
-    /* 장바구니 삭제 */
+    /* 장바구니 상품 삭제 */
     @DeleteMapping("")
     public ResponseEntity deleteProduct(@RequestHeader("X-Member-Id") String id,
                                         @RequestBody List<Long> cartProductIdList) {
@@ -44,7 +44,7 @@ public class CartController {
         return ResponseEntity.ok("장바구니에서 해당 상품이 삭제되었습니다.");
     }
 
-    /* 장바구니 삭제 (주문 완료 이후) */
+    /* 장바구니 상품 삭제 (주문 완료 이후) */
     @DeleteMapping("/fromOrder")
     public void deleteProductFromCart(@RequestParam String id, @RequestBody List<Long> cartProductIdList) {
         log.info("id: {}, productIds size: {}", id, cartProductIdList.size());

@@ -1,6 +1,6 @@
 package com.project.memberservice.service;
 
-import com.project.memberservice.client.OrderServiceClient;
+import com.project.memberservice.feign.OrderServiceClient;
 import com.project.memberservice.dto.MemberRequestDto;
 import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.dto.OrderResponseDto;
@@ -102,7 +102,7 @@ public class MemberService {
         //주문 내역 조회
         CircuitBreaker circuitBreaker = circuitBreakerFactory.create("circuitBreaker");
         List<OrderResponseDto> orders = circuitBreaker.run(() -> {
-            ResponseEntity<List<OrderResponseDto>> responseEntity = orderServiceClient.getOrdersByMemberId(memberId);
+            ResponseEntity<List<OrderResponseDto>> responseEntity = orderServiceClient.getOrdersByMemberId(id);
             return responseEntity.getBody();
         }, throwable -> {
             return new ArrayList<>();
@@ -148,6 +148,7 @@ public class MemberService {
     /**
      * 회원 탈퇴
      * isDeleted -> 1(true)로 수정
+     * 해당 회원의 장바구니, 장바구니에 담긴 상품 정보 삭제
      *
      * @param id memberId
      */
@@ -159,5 +160,8 @@ public class MemberService {
 
         member.setIsDeleted(1);
         memberRepository.save(member);
+
+        // 장바구니 삭제
+        cartService.deleteCart(member);
     }
 }

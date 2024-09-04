@@ -1,6 +1,6 @@
 package com.project.memberservice.service;
 
-import com.project.memberservice.client.ProductServiceClient;
+import com.project.memberservice.feign.ProductServiceClient;
 import com.project.memberservice.dto.CartProductRequestDto;
 import com.project.memberservice.dto.CartRequestDto;
 import com.project.memberservice.dto.ProductIdsRequestDto;
@@ -104,6 +104,7 @@ public class CartService {
      *
      * @param id memberId
      */
+    @Transactional
     public void updateQuantity(String id, CartRequestDto cartRequestDto, Boolean isIncrease) {
         Long memberId = Long.parseLong(id);
         Cart cart = cartRepository.findByMember_MemberId(memberId)
@@ -144,11 +145,12 @@ public class CartService {
     }
 
     /**
-     * 장바구니 삭제
+     * 장바구니 상품 삭제
      *
      * @param id memberId
      * @param cartProductIdList 장바구니에서 삭제할 상품 목록
      */
+    @Transactional
     public void deleteProduct(String id, List<Long> cartProductIdList) {
         log.info("id: {}, productIds size: {}", id, cartProductIdList.size());
 
@@ -196,4 +198,13 @@ public class CartService {
         return productDetails;
     }
 
+    /**
+     * 장바구니 삭제 (회원 탈퇴 시)
+     *
+     * @param member 해당 회원의 장바구니를 삭제함
+     */
+    @Transactional
+    public void deleteCart(Member member) {
+        cartRepository.deleteByMember(member);
+    }
 }

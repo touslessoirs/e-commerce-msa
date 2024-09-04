@@ -1,7 +1,7 @@
 package com.project.orderservice.service;
 
-import com.project.orderservice.client.CartServiceClient;
-import com.project.orderservice.client.ProductServiceClient;
+import com.project.orderservice.feign.CartServiceClient;
+import com.project.orderservice.feign.ProductServiceClient;
 import com.project.orderservice.dto.*;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
@@ -108,7 +108,7 @@ public class OrderService {
             orderRepository.save(savedOrder);
 
             if (orderRequestDto.isFromCart()) {
-                // 장바구니 삭제
+                // 장바구니 상품 삭제
                 List<Long> productIds = orderRequestDto.getOrderProducts().stream()
                         .map(OrderProductRequestDto::getProductId)
                         .collect(Collectors.toList());

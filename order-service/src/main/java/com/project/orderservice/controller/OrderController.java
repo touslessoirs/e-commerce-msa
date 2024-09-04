@@ -85,6 +85,7 @@ public class OrderController {
     /* 사용자별 전체 주문 내역 조회 */
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponseDto>> getOrdersByMemberId(@RequestHeader("X-Member-Id") String id) {
+        log.info("@@@@@@ id: {}", id);
         Iterable<OrderResponseDto> orderList = orderService.getOrdersByMemberId(id);
 
         List<OrderResponseDto> result = new ArrayList<>();
@@ -94,7 +95,7 @@ public class OrderController {
     }
 
     /* 주문 상세 조회 */
-    @GetMapping("/{orderId}")
+    @GetMapping("/orders/{orderId}")
     public ResponseEntity<OrderResponseDto> getOrderDetail(@PathVariable("orderId") Long orderId) {
         OrderResponseDto orderResponseDto = orderService.getOrderDetail(orderId);
         return ResponseEntity.ok(orderResponseDto);

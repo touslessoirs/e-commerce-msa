@@ -31,7 +31,7 @@ public class MemberController {
     @Value("${server.port}")
     private String port;
 
-    @Value("${jwt.expiration_time}")
+    @Value("${jwt.access_expiration_time}")
     private String expirationTime;
 
     private final MemberService memberService;
@@ -50,7 +50,7 @@ public class MemberController {
     }
 
     /* 회원 가입 */
-    @PostMapping("/members")
+    @PostMapping("/signup")
     public ResponseEntity<MemberResponseDto> signUp(@Valid @RequestBody MemberRequestDto memberRequestDto) {
         MemberResponseDto memberResponseDto = memberService.signUp(memberRequestDto);
 
@@ -58,7 +58,7 @@ public class MemberController {
     }
 
     /* 전체 사용자 조회 */
-    @GetMapping("/members")
+    @GetMapping("/allMembers")
     public ResponseEntity<List<MemberResponseDto>> getAllMembers(HttpServletRequest request) {
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         Iterable<Member> memberList = memberService.getAllMembers();
@@ -72,7 +72,7 @@ public class MemberController {
     }
 
     /* 사용자 정보 & 주문 내역 조회 */
-    @GetMapping("/members/{memberId}")
+    @GetMapping("/members")
     public ResponseEntity<MemberResponseDto> getUser(@RequestHeader("X-Member-Id") String id) {
         MemberResponseDto memberResponseDto = memberService.getMemberByMemberId(id);
 
@@ -80,7 +80,7 @@ public class MemberController {
     }
 
     /* 회원 정보 수정 (비밀번호 제외) */
-    @PutMapping("/members/{memberId}")
+    @PutMapping("/members")
     public ResponseEntity<MemberResponseDto> modifyUser(@RequestHeader("X-Member-Id") String id,
                                                         @Valid @RequestBody MemberRequestDto memberRequestDto) {
         MemberResponseDto updatedMember = memberService.updateMember(id, memberRequestDto);
@@ -88,7 +88,7 @@ public class MemberController {
     }
 
     /* 회원 탈퇴 */
-    @PutMapping("/withdraw/{memberId}")
+    @PutMapping("/withdraw")
     public ResponseEntity deleteMember(@RequestHeader("X-Member-Id") String id) {
         memberService.withdraw(id);
         return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");

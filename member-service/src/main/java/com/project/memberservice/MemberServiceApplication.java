@@ -35,4 +35,5 @@ public class MemberServiceApplication {
 	public FeignErrorDecoder feignErrorDecoder(){
 		return new FeignErrorDecoder();
 	}
+
 }

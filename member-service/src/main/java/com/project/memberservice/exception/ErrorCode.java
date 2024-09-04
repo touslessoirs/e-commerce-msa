@@ -16,7 +16,8 @@ public enum ErrorCode {
     ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "USER-007", "이미 인증된 사용자입니다."),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "USER-008", "잘못된 이메일 주소 형식입니다."),
 
-    INVALID_ADMIN_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 관리자 토큰입니다."),
+    INVALID_ADMIN_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 Admin Token 입니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.NOT_FOUND, "AUTH-002", "유효하지 않은 Refresh Token 입니다."),
 
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER-001", "주문을 찾을 수 없습니다."),
 

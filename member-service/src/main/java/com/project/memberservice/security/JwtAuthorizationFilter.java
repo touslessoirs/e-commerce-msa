@@ -45,7 +45,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             Claims info = jwtUtil.getUserInfoFromToken(tokenValue);
 
             try {
-                setAuthentication(info.getSubject());
+                setAuthentication(info.getSubject());   // token이 정상이면 SecurityContext에 저장
             } catch (Exception e) {
                 log.error(e.getMessage());
                 return;

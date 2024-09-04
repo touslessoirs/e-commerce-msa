@@ -1,18 +1,19 @@
-package com.project.memberservice.client;
+package com.project.memberservice.feign;
 
 import com.project.memberservice.dto.OrderResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.List;
 
 @FeignClient(name = "order-service")
 public interface OrderServiceClient {
 
-    @GetMapping("/{memberId}/orders")
-    public ResponseEntity<List<OrderResponseDto>> getOrdersByMemberId(@PathVariable("memberId") Long memberId);
+    /* 사용자별 주문 내역 조회 */
+    @GetMapping("/orders")
+    public ResponseEntity<List<OrderResponseDto>> getOrdersByMemberId(@RequestHeader("X-Member-Id") String id);
 
     @GetMapping("/errorful/case1")
     public ResponseEntity<String> getCase1Response();

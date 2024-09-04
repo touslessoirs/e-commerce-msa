@@ -5,6 +5,7 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,17 +16,19 @@ import java.util.Base64;
 import java.util.Date;
 
 @Slf4j(topic = "JwtUtil")
+@RequiredArgsConstructor
 @Component
 public class JwtUtil {
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String AUTHORIZATION_KEY = "auth";
     public static final String BEARER_PREFIX = "Bearer ";
 
-    @Value("${jwt.expiration_time}")
-    private long expirationTime; // 30분
+    @Value("${jwt.access_expiration_time}")
+    private long accessExpirationTime;
 
     @Value("${jwt.secret_key}") // Base64 Encode 한 SecretKey
     private String secretKey;
+
     private Key key;
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
 
@@ -35,21 +38,21 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(secretKeyBytes);
     }
 
-    // 토큰 생성
+    /* Access Token 생성 */
     public String createToken(String username, UserRoleEnum role, String memberId) {
-        Date date = new Date();
+        Date now = new Date();
 
         return Jwts.builder()
                 .setSubject(username) // 사용자 식별자값(email)
                 .claim(AUTHORIZATION_KEY, role)
                 .claim("memberId", memberId)
-                .setExpiration(new Date(date.getTime() + expirationTime))
-                .setIssuedAt(date)
+                .setExpiration(new Date(now.getTime() + accessExpirationTime))
+                .setIssuedAt(now)
                 .signWith(key, signatureAlgorithm)
                 .compact();
     }
 
-    // header 에서 JWT 가져오기
+    /* header 에서 JWT token 가져오기 */
     public String getJwtFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
@@ -58,7 +61,7 @@ public class JwtUtil {
         return null;
     }
 
-    // 토큰 검증
+    /* Access Token 검증 */
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
@@ -75,7 +78,7 @@ public class JwtUtil {
         return false;
     }
 
-    // 토큰에서 사용자 정보 가져오기
+    /* 토큰에서 사용자 정보 가져오기 */
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     }
