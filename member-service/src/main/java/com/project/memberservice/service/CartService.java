@@ -1,6 +1,5 @@
 package com.project.memberservice.service;
 
-import com.project.memberservice.feign.ProductServiceClient;
 import com.project.memberservice.dto.CartProductRequestDto;
 import com.project.memberservice.dto.CartRequestDto;
 import com.project.memberservice.dto.ProductIdsRequestDto;
@@ -11,8 +10,10 @@ import com.project.memberservice.entity.Member;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
 import com.project.memberservice.exception.FeignErrorDecoder;
+import com.project.memberservice.feign.ProductServiceClient;
 import com.project.memberservice.repository.CartProductRepository;
 import com.project.memberservice.repository.CartRepository;
+import com.project.memberservice.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,6 +33,7 @@ public class CartService {
     private final CartProductRepository cartProductRepository;
     private final ProductServiceClient productServiceClient;
     private final FeignErrorDecoder feignErrorDecoder;
+    private final MemberRepository memberRepository;
 
     /**
      * 장바구니 생성(회원가입)
@@ -49,16 +52,21 @@ public class CartService {
      * - 해당 상품 없음 -> 상품 등록
      * - 해당 상품 있음 -> 상품 수량 수정
      *
-     * @param id memberId
+     * @param id             memberId
      * @param cartRequestDto 장바구니에 추가할 상품 목록
      */
     @Transactional
     public void addCart(String id, CartRequestDto cartRequestDto) {
         Long memberId = Long.parseLong(id);
+        Member member = memberRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. 장바구니 조회
         Cart cart = cartRepository.findByMember_MemberId(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CART_NOT_FOUND));
+                .orElseGet(() -> {
+                    Cart newCart = new Cart();
+                    newCart.setMember(member);
+                    return cartRepository.save(newCart); // 장바구니 정보가 없는 경우 새로 생성
+                });
 
         List<CartProductRequestDto> cartProducts = cartRequestDto.getCartProducts();
         for (CartProductRequestDto cartProductRequestDto : cartProducts) {
@@ -66,7 +74,7 @@ public class CartService {
             int quantityToAdd = cartProductRequestDto.getQuantity(); // 추가할 수량
 
             // 2. 장바구니에 해당 상품 있는지 조회
-            CartProduct cartProduct = cartProductRepository.findByCartAndProductId(cart, cartProductRequestDto.getProductId())
+            CartProduct cartProduct = cartProductRepository.findByProductIdAndCart(cartProductRequestDto.getProductId(), cart)
                     .orElse(null);  // 추가/증가 분기 처리를 위해 예외 던지지 않음
 
             // 3. 해당 상품의 재고 조회
@@ -74,7 +82,7 @@ public class CartService {
                     productServiceClient.getProductDetail(cartProductRequestDto.getProductId()).getBody();
             int availableStock = productResponseDto.getStock(); // 최대 추가 가능 수량
 
-            if (availableStock<=0) {
+            if (availableStock <= 0) {
                 continue;   // 재고 0개인 상품은 추가하지 않음
             }
             // 추가할 수량이 재고 수량보다 많은 경우 조정
@@ -120,7 +128,7 @@ public class CartService {
             List<CartProduct> productsToRemove = new ArrayList<>();     // 삭제할 상품 목록
 
             for (CartProductRequestDto cartProductRequestDto : cartProducts) {
-                CartProduct cartProduct = cartProductRepository.findByCartAndProductId(cart, cartProductRequestDto.getProductId())
+                CartProduct cartProduct = cartProductRepository.findByProductIdAndCart(cartProductRequestDto.getProductId(), cart)
                         .orElseThrow(() -> new CustomException(ErrorCode.CART_PRODUCT_NOT_FOUND));
 
                 int quantityChange = cartProductRequestDto.getQuantity();
@@ -142,29 +150,6 @@ public class CartService {
                 cartProductRepository.deleteAll(productsToRemove);
             }
         }
-    }
-
-    /**
-     * 장바구니 상품 삭제
-     *
-     * @param id memberId
-     * @param cartProductIdList 장바구니에서 삭제할 상품 목록
-     */
-    @Transactional
-    public void deleteProduct(String id, List<Long> cartProductIdList) {
-        log.info("id: {}, productIds size: {}", id, cartProductIdList.size());
-
-        Long memberId = Long.parseLong(id);
-        Cart cart = cartRepository.findByMember_MemberId(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CART_NOT_FOUND));
-
-        List<CartProduct> cartProducts = cartProductRepository.findByCartAndProductIdIn(cart, cartProductIdList);
-
-        if (cartProducts.size() != cartProductIdList.size()) {
-            throw new CustomException(ErrorCode.CART_PRODUCT_NOT_FOUND);
-        }
-
-        cartProductRepository.deleteAll(cartProducts);
     }
 
     /**
@@ -199,12 +184,50 @@ public class CartService {
     }
 
     /**
-     * 장바구니 삭제 (회원 탈퇴 시)
+     * 장바구니에 담긴 상품 삭제
      *
-     * @param member 해당 회원의 장바구니를 삭제함
+     * @param id                memberId
+     * @param cartProductIdList 장바구니에서 삭제할 상품 목록
+     */
+    @Transactional
+    public void deletProducts(String id, List<Long> cartProductIdList) {
+        Long memberId = Long.parseLong(id);
+        Cart cart = cartRepository.findByMember_MemberId(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CART_NOT_FOUND));
+
+        List<CartProduct> cartProducts = cartProductRepository.findAllByProductIdInAndCart(cartProductIdList, cart);
+        if (cartProducts.isEmpty()) {
+            throw new CustomException(ErrorCode.CART_PRODUCT_NOT_FOUND);
+        }
+
+        cartProductRepository.deleteAll(cartProducts);
+    }
+
+    /**
+     * 장바구니 및 담긴 상품 삭제 (회원 탈퇴 시)
+     *
+     * @param member memberId
      */
     @Transactional
     public void deleteCart(Member member) {
-        cartRepository.deleteByMember(member);
+        Long memberId = member.getMemberId();
+
+        Optional<Cart> optionalCart = cartRepository.findByMember_MemberId(memberId);
+
+        if (optionalCart.isPresent()) {
+            // 해당 장바구니에 담겨있던 상품 삭제
+            Cart cart = optionalCart.get();
+            List<CartProduct> cartProducts = cartProductRepository.findAllByCart(cart);
+
+            if (!cartProducts.isEmpty()) {
+                List<Long> productIds = cartProducts.stream()
+                        .map(CartProduct::getProductId)
+                        .collect(Collectors.toList());
+                deletProducts(String.valueOf(memberId), productIds);
+            }
+
+            // 장바구니 삭제
+            cartRepository.deleteByMember(member);
+        }
     }
 }

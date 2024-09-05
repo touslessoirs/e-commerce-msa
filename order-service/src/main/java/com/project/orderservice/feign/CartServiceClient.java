@@ -12,5 +12,5 @@ public interface CartServiceClient {
 
     /* 장바구니 상품 삭제 (주문 완료 이후) */
     @DeleteMapping("/cart/fromOrder")
-    public void deleteProductFromCart(@RequestParam String id, @RequestBody List<Long> cartProductIdList);
+    public void deleteProductsFromCart(@RequestParam String id, @RequestBody List<Long> cartProductIdList);
 }

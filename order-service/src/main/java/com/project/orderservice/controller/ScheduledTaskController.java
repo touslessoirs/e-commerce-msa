@@ -19,11 +19,12 @@ public class ScheduledTaskController {
 
     private final ScheduledTaskManager scheduledTaskManager;
 
+    /* 주문 상태 업데이트 */
     @PostMapping("/orderStatus")
     public ResponseEntity updateOrderStatus() {
         log.info("update OrderStatus");
         scheduledTaskManager.updateOrderStatus();
-        return ResponseEntity.ok("update OrderStatus successfully");
+        return ResponseEntity.ok("주문 상태 업데이트 완료");
     }
 
 }

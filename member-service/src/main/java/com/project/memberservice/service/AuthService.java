@@ -120,6 +120,8 @@ public class AuthService {
      * @param id memberId
      * @param verificationCode 사용자가 입력한 인증번호
      * @return 검증 결과에 대한 응답
+     * @throws CustomException INVALID_VERIFICATION_CODE 인증번호가 존재하지 않거나 불일치하는 경우
+     * @throws CustomException USER_NOT_FOUND 해당 사용자가 존재하지 않는 경우
      */
     public ResponseEntity checkVerificationCode(String id, String verificationCode) {
         Long memberId = Long.parseLong(id);

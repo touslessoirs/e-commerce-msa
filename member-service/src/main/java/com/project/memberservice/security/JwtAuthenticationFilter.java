@@ -81,7 +81,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         res.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
         res.addHeader(REFRESH_TOKEN_HEADER, refreshToken);
 
-        res.getWriter().write("{\"message\": \"로그인에 성공하였습니다.\"}");
+        res.getWriter().write("{\"message\": \"로그인이 완료되었습니다.\"}");
     }
 
 

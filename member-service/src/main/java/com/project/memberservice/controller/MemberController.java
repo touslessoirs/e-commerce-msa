@@ -52,8 +52,8 @@ public class MemberController {
 
     /* 회원 가입 */
     @PostMapping("/signup")
-    public ResponseEntity<MemberResponseDto> signUp(@Valid @RequestBody MemberRequestDto memberRequestDto) {
-        MemberResponseDto memberResponseDto = memberService.signUp(memberRequestDto);
+    public ResponseEntity<MemberResponseDto> signup(@Valid @RequestBody MemberRequestDto memberRequestDto) {
+        MemberResponseDto memberResponseDto = memberService.signup(memberRequestDto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(memberResponseDto);
     }
@@ -72,7 +72,7 @@ public class MemberController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    /* 사용자 정보 & 주문 내역 조회 */
+    /* 회원 정보 & 주문 내역 조회 */
     @GetMapping("/members")
     public ResponseEntity<MemberResponseDto> getUser(@RequestHeader("X-Member-Id") String id) {
         MemberResponseDto memberResponseDto = memberService.getMemberByMemberId(id);

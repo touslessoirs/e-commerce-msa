@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -31,6 +32,7 @@ public class JwtUtil {
 
     private Key key;
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @PostConstruct
     public void init() {
@@ -48,7 +50,6 @@ public class JwtUtil {
      */
     public String createToken(String username, UserRoleEnum role, String memberId) {
         Date now = new Date();
-
         return Jwts.builder()
                 .setSubject(username) // 사용자 식별자값(email)
                 .claim(AUTHORIZATION_KEY, role)
@@ -103,5 +104,23 @@ public class JwtUtil {
      */
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+    }
+
+    /**
+     * Access Token이 logout 블랙리스트에 있는지 확인하기
+     *
+     * @param accessToken 블랙리스트에서 확인할 Access Token
+     * @return 블랙리스트에 존재하면 true, 없으면 false
+     */
+    public boolean isTokenInBlacklist(String accessToken) {
+        // Redis에서 해당 accessToken에 저장된 값을 조회
+        Object value = redisTemplate.opsForValue().get(accessToken);
+
+        if(value != null) {
+            // 저장된 값이 "logout"인지 확인
+            return "logout".equals(value.toString());
+        }
+
+        return false;
     }
 }

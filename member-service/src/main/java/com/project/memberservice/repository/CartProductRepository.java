@@ -9,12 +9,29 @@ import java.util.Optional;
 
 public interface CartProductRepository extends JpaRepository<CartProduct, Long> {
 
-    /* 장바구니에서 해당 상품 조회 */
-    Optional<CartProduct> findByCartAndProductId(Cart cart, Long productId);
+    /**
+     * 특정 장바구니에 담긴 특정 상품 정보 조회
+     *
+     * @param productId
+     * @param cart
+     * @return 해당 장바구니에 담긴 해당 상품의 정보
+     */
+    Optional<CartProduct> findByProductIdAndCart(Long productId, Cart cart);
 
-    /* 장바구니에 담긴 상품 목록 조회 */
+    /**
+     * 특정 장바구니에 담긴 전체 상품 목록 조회
+     *
+     * @param cart
+     * @return 해당 장바구니에 담긴 전체 상품 목록의 정보
+     */
     List<CartProduct> findAllByCart(Cart cart);
 
-    /* 해당하는 모든 CartProduct를 한 번에 조회 */
-    List<CartProduct> findByCartAndProductIdIn(Cart cart, List<Long> cartProductIdList);
+    /**
+     * 특정 장바구니에 담긴 특정 상품 목록 정보 조회
+     *
+     * @param cartProductIdList 조회하려는 상품 ID 목록
+     * @param cart
+     * @return 해당 장바구니에 담긴 해당 상품 목록의 정보
+     */
+    List<CartProduct> findAllByProductIdInAndCart(List<Long> cartProductIdList, Cart cart);
 }

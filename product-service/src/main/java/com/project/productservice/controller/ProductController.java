@@ -32,7 +32,6 @@ public class ProductController {
     @GetMapping("/health-check")
     public String status() {
         return String.format("PRODUCT SERVICE Running on PORT %s", port);
-
     }
 
     @GetMapping("/welcome")
@@ -41,7 +40,7 @@ public class ProductController {
     }
 
     /* 전체 상품 조회 */
-    @GetMapping("/products")
+    @GetMapping("/allProducts")
     public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
         Iterable<ProductResponseDto> productList = productService.getAllProducts();
 
@@ -52,7 +51,7 @@ public class ProductController {
     }
 
     /* 상품 상세 조회 */
-    @GetMapping("/{productId}")
+    @GetMapping("/products/{productId}")
     public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable Long productId) {
         log.info("getProductDetail 호출");
         ProductResponseDto productResponseDto = productService.getProductDetail(productId);
@@ -60,45 +59,10 @@ public class ProductController {
     }
 
     /* 여러 상품의 상세 조회 */
-    @PostMapping("/details")
+    @PostMapping("/products/details")
     public ResponseEntity<List<ProductResponseDto>> getProductsDetails(@RequestBody ProductIdsRequestDto productIds) {
         List<ProductResponseDto> productDetails = productService.getProductsDetails(productIds);
         return ResponseEntity.ok(productDetails);
-    }
-
-    /* 주문 요청 - 주문 가능 여부 확인 */
-    @GetMapping("/check-product")
-    public boolean checkProductForOrder(@RequestParam Long productId, @RequestParam int quantity) {
-        boolean isAvailable = productService.checkProductForOrder(productId, quantity);
-        return isAvailable;
-    }
-
-    /* 구매 가능 시간 확인 */
-    @GetMapping("/check-purchase-time")
-    public ResponseEntity<Boolean> validatePurchaseTime(@RequestParam Long productId) {
-        boolean isAvailable = productService.checkPurchaseTime(productId);
-        return ResponseEntity.ok(isAvailable);
-    }
-
-    /* 주문 가능한 재고량인지 확인 */
-    @GetMapping("/check-stock")
-    public ResponseEntity<Boolean> checkStock(@RequestParam Long productId, @RequestParam int quantity) {
-        boolean isStockUpdated = productService.checkStock(productId, quantity);
-        return ResponseEntity.ok(isStockUpdated);
-    }
-
-    /* 재고 수량 감소 (Redis, DB) */
-    @PostMapping("/reduce-stock")
-    public ResponseEntity reduceStock(@RequestParam Long productId, @RequestParam int quantity) {
-        productService.reduceStock(productId, quantity);
-        return ResponseEntity.ok("Stock reduced successfully.");
-    }
-
-    /* 주문 실패 시 롤백 */
-    @PostMapping("/rollback-stock")
-    public ResponseEntity rollbackStock(@RequestParam Long productId, @RequestParam int quantity) {
-        productService.rollbackStock(productId, quantity);
-        return ResponseEntity.ok("Stock rolled back successfully.");
     }
 
 }

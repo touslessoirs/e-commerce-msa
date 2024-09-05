@@ -1,7 +1,7 @@
 package com.project.orderservice.service;
 
 import com.project.orderservice.feign.CartServiceClient;
-import com.project.orderservice.feign.ProductServiceClient;
+import com.project.orderservice.feign.ProductOrderFlowServiceClient;
 import com.project.orderservice.dto.*;
 import com.project.orderservice.entity.*;
 import com.project.orderservice.exception.CustomException;
@@ -32,26 +32,29 @@ public class OrderService {
     private final OrderProductRepository orderProductRepository;
     private final ShippingRepository shippingRepository;
     private final PaymentService paymentService;
-    private final ProductServiceClient productServiceClient;
+    private final ProductOrderFlowServiceClient productOrderFlowServiceClient;
     private final CartServiceClient cartServiceClient;
     private final RedissonClient redissonClient;
     private final FeignErrorDecoder feignErrorDecoder;
 
     /**
-     * 구매 가능 시간 & 재고 확인
+     * 주문 가능 여부 확인
      *
-     * @param orderRequestDto 주문 정보
+     * 1. 해당 상품이 현재 구매 가능한 상품인지 확인
+     * 2. 해당 상품의 재고가 구매하려는 수량 이상인지 확인
+     *
+     * @param orderRequestDto 주문 요청에 필요한 정보 (상품 목록, 수량, 가격 등)
      * @return 주문하고자 하는 상품들이 모두 주문 가능하면 true
      *         아래 에러 발생 가능 상황이 아닌 다른 사유로 주문 불가능하면 false
      *
      * Error 발생 가능 상황:
-     *  1. 구매 가능 시간이 아닐 때 (PURCHASE_TIME_INVALID)
-     *  2. 재고가 부족할 때 (STOCK_INSUFFICIENT)
+     * 1. 구매 가능 시간이 아닐 때 (PURCHASE_TIME_INVALID)
+     * 2. 재고가 부족할 때 (STOCK_INSUFFICIENT)
      */
     @Transactional
     public boolean requestOrder(OrderRequestDto orderRequestDto) {
         for (OrderProductRequestDto orderProduct : orderRequestDto.getOrderProducts()) {
-            boolean isAvailable = productServiceClient.checkProductForOrder(    // 구매 가능 시간 & 재고 확인
+            boolean isAvailable = productOrderFlowServiceClient.checkProductForOrder(    // 구매 가능 시간 & 재고 확인
                     orderProduct.getProductId(),
                     orderProduct.getQuantity());
 
@@ -65,11 +68,16 @@ public class OrderService {
     }
 
     /**
-     * 주문하기
+     * 주문 생성 및 결제 요청
      *
-     * @param id memberId
-     * @param orderRequestDto 주문 정보
-     * @return 완료된 주문
+     * 주문 요청에 따라 주문을 생성하고, 각 상품의 재고를 감소시킨 후 결제 처리를 진행한다.
+     * 결제가 성공하면 'PAYMENT_COMPLETED', 실패하면 'PAYMENT_FAILED'로 설정한다.
+     * 해당 주문에 해당하는 배송 정보를 저장한다.
+     * 만약 주문이 장바구니를 통해 이루어진 경우, 해당 상품(들)을 장바구니에서 삭제한다.
+     *
+     * @param id 주문을 요청한 회원의 ID
+     * @param orderRequestDto 주문 요청에 필요한 정보 (상품 목록, 수량, 가격 등)
+     * @return 저장된 주문 정보 (배송 정보, 결제 처리 결과 등 포함)
      */
     @Transactional
     public OrderResponseDto createOrder(String id, OrderRequestDto orderRequestDto) {
@@ -85,7 +93,7 @@ public class OrderService {
                 lock.lock();
 
                 try {
-                    productServiceClient.reduceStock(orderProduct.getProductId(), orderProduct.getQuantity());
+                    productOrderFlowServiceClient.reduceStock(orderProduct.getProductId(), orderProduct.getQuantity());
                 } finally {
                     lock.unlock();
                 }
@@ -113,11 +121,10 @@ public class OrderService {
             orderRepository.save(savedOrder);
 
             if (orderRequestDto.isFromCart()) {
-                // 장바구니 상품 삭제
+                // 장바구니에 담긴 상품 삭제
                 List<Long> productIds = orderRequestDto.getOrderProducts().stream()
                         .map(OrderProductRequestDto::getProductId)
                         .collect(Collectors.toList());
-                log.info("id: {}, productIds size: {}", id, productIds.size());
                 cartServiceClient.deleteProductsFromCart(id, productIds);
             }
 
@@ -132,9 +139,12 @@ public class OrderService {
     /**
      * 주문 정보 저장
      *
-     * @param id memberId
-     * @param orderRequestDto 주문 정보
-     * @return 저장 완료한 주문
+     * 각 상품의 수량 및 가격을 계산하여 총 주문 수량과 금액을 설정한 후 데이터베이스에 저장한다.
+     * 각 상품에 대한 주문 정보도 별도로 데이터베이스에 저장되어 연결된 상품 목록을 함께 관리할 수 있도록 한다.
+     *
+     * @param id 주문을 요청한 회원의 ID
+     * @param orderRequestDto 주문 요청에 필요한 정보 (상품 목록, 수량, 가격 등)
+     * @return 저장된 주문 정보 (배송 정보, 결제 처리 결과 등 미포함)
      */
     public Order saveOrder(String id, OrderRequestDto orderRequestDto) {
         List<OrderProduct> orderProductList = new ArrayList<>();
@@ -171,9 +181,11 @@ public class OrderService {
     }
 
     /**
-     * 재고 rollback (주문 실패, 결제 실패, 주문 취소, 반품 승인)
+     * 재고 롤백 처리
      *
-     * @param orderProductRequestList rollback해야하는 상품 목록
+     * 주문 실패, 결제 실패, 주문 취소 또는 반품 승인 시 해당 상품의 재고를 롤백한다.
+     *
+     * @param orderProductRequestList 재고를 롤백해야 하는 상품 목록
      */
     @Transactional
     public void rollbackStock(List<OrderProductRequestDto> orderProductRequestList) {
@@ -184,7 +196,7 @@ public class OrderService {
             lock.lock();
 
             try {
-                productServiceClient.rollbackStock(orderProduct.getProductId(), orderProduct.getQuantity());
+                productOrderFlowServiceClient.rollbackStock(orderProduct.getProductId(), orderProduct.getQuantity());
             } finally {
                 lock.unlock();
             }
@@ -194,8 +206,10 @@ public class OrderService {
     /**
      * 배송 정보 저장
      *
-     * @param order 저장하려는 배송 건에 해당하는 주문
-     * @param shippingRequestDto 배송 정보
+     * 주어진 주문과 연관된 배송 정보를 데이터베이스에 저장한다.
+     *
+     * @param order 저장하려는 배송 정보와 연결된 주문 객체
+     * @param shippingRequestDto 저장된 배송 정보
      */
     @Transactional
     public void saveShipping(Order order, ShippingRequestDto shippingRequestDto) {
@@ -212,7 +226,9 @@ public class OrderService {
     /**
      * 사용자별 전체 주문 내역 조회
      *
-     * @param id memberId
+     * 주어진 사용자 ID에 해당하는 모든 주문 내역을 조회하여, 각 주문을 DTO 객체로 변환한 리스트로 반환한다.
+     *
+     * @param id 주문을 조회할 회원의 ID
      * @return 해당 사용자의 전체 주문 내역
      */
     public List<OrderResponseDto> getOrdersByMemberId(String id) {
@@ -225,11 +241,14 @@ public class OrderService {
     /**
      * 주문 상세 조회
      *
-     * @param orderId
+     * @param id 해당 주문을 조회할 회원의 ID
+     * @param orderId 상세 정보를 조회할 주문의 ID
      * @return 해당 주문의 상세 정보
      */
-    public OrderResponseDto getOrderDetail(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+    public OrderResponseDto getOrderDetail(String id, Long orderId) {
+        Long memberId = Long.parseLong(id);
+
+        Order order = orderRepository.findByOrderIdAndMemberId(orderId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
         return new OrderResponseDto(order);
@@ -237,11 +256,12 @@ public class OrderService {
 
     /**
      * 주문 취소
-     * PAYMENT_COMPLETED 상태인 주문만 취소 가능 (=결제 완료 1일 이내)
-     * 승인 절차 없이 즉시 취소 처리한다.
-     * 주문 취소 후 재고 rollback
      *
-     * @param orderId
+     * 결제가 완료된 상태인(PAYMENT_COMPLETED) 주문만 취소할 수 있으며, 승인 절차 없이 즉시 취소 처리함
+     * 주문 취소 후 해당 주문에 대한 재고는 롤백한다.
+     *
+     * @param id 취소를 요청한 회원의 ID
+     * @param orderId 취소하려는 주문의 ID
      */
     public void cancelOrder(String id, Long orderId) {
         Long memberId = Long.parseLong(id);
@@ -270,9 +290,12 @@ public class OrderService {
 
     /**
      * 반품 신청
-     * DELIVERED 상태인 주문만 반품 신청 가능 (=배송 완료 3일 이내)
+     * 
+     * 배송 완료 상태(DELIVERED)인 주문만 반품 신청이 가능하며, 관리자의 별도의 승인 절차가 필요함
+     * 주문 상태를 '반품 요청(RETURN_REQUESTED)'으로 변경한다.
      *
-     * @param orderId
+     * @param id 반품을 요청한 회원의 ID
+     * @param orderId 반품하려는 주문의 ID
      */
     public void requestReturn(String id, Long orderId) {
         Long memberId = Long.parseLong(id);
@@ -292,10 +315,12 @@ public class OrderService {
 
     /**
      * 반품 신청 승인
-     * RETURN_REQUESTED 상태인 주문만 반품 승인 가능
-     * 반품 승인 후 재고 rollback
+     * 
+     * 반품 신청 상태(RETURN_REQUESTED)인 주문에 대해 반품을 승인 처리한다.
+     * 주문 상태를 '반품 완료(RETURN_COMPLETED)'으로 변경한다.
+     * 반품 승인 후 해당 주문에 대한 재고는 롤백한다.
      *
-     * @param orderId
+     * @param orderId 반품을 승인할 주문의 ID
      */
     @Transactional
     public void approveReturnRequest(Long orderId) {

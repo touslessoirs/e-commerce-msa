@@ -46,7 +46,7 @@ public class OrderController {
         return greeting;
     }
 
-    /* 주문 요청 - 주문 가능 여부 확인 및 주문하기 */
+    /* 주문 요청 - 주문 가능 여부 확인 -> 주문 생성 및 결제 요청 */
     @PostMapping("/orders/request")
     public ResponseEntity<OrderResponseDto> requestOrder(@RequestHeader("X-Member-Id") String id,
                                                          @Valid @RequestBody OrderRequestDto orderRequestDto) {
@@ -85,7 +85,6 @@ public class OrderController {
     /* 사용자별 전체 주문 내역 조회 */
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponseDto>> getOrdersByMemberId(@RequestHeader("X-Member-Id") String id) {
-        log.info("@@@@@@ id: {}", id);
         Iterable<OrderResponseDto> orderList = orderService.getOrdersByMemberId(id);
 
         List<OrderResponseDto> result = new ArrayList<>();
@@ -96,8 +95,9 @@ public class OrderController {
 
     /* 주문 상세 조회 */
     @GetMapping("/orders/{orderId}")
-    public ResponseEntity<OrderResponseDto> getOrderDetail(@PathVariable("orderId") Long orderId) {
-        OrderResponseDto orderResponseDto = orderService.getOrderDetail(orderId);
+    public ResponseEntity<OrderResponseDto> getOrderDetail(@RequestHeader("X-Member-Id") String id,
+                                                           @PathVariable("orderId") Long orderId) {
+        OrderResponseDto orderResponseDto = orderService.getOrderDetail(id, orderId);
         return ResponseEntity.ok(orderResponseDto);
     }
 
@@ -110,14 +110,14 @@ public class OrderController {
 
     /* 반품 신청 */
     @PostMapping("/return/{orderId}")
-    public ResponseEntity refundOrder(@RequestHeader("X-Member-Id") String id, @PathVariable Long orderId) {
+    public ResponseEntity requestReturn(@RequestHeader("X-Member-Id") String id, @PathVariable Long orderId) {
         orderService.requestReturn(id, orderId);
         return ResponseEntity.ok("반품 신청이 완료되었습니다.");
     }
 
     /* 반품 신청 승인 */
     @PostMapping("/approve-return/{orderId}")
-    public ResponseEntity<String> approveReturn(@PathVariable Long orderId) {
+    public ResponseEntity<String> approveReturnRequest(@PathVariable Long orderId) {
         orderService.approveReturnRequest(orderId);
         return ResponseEntity.ok("반품 신청이 승인되었습니다.");
     }

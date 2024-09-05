@@ -46,11 +46,11 @@ public class MemberService {
     /**
      * 회원가입
      *
-     * @param memberRequestDto 회원 가입 정보
+     * @param memberRequestDto 회원 가입에 필요한 정보
      * @return MemberResponseDto 회원 정보
      */
     @Transactional
-    public MemberResponseDto signUp(MemberRequestDto memberRequestDto) {
+    public MemberResponseDto signup(MemberRequestDto memberRequestDto) {
         try {
             // 1. 사용자 ROLE 확인
             UserRoleEnum role = UserRoleEnum.USER;  //default
@@ -91,10 +91,10 @@ public class MemberService {
     }
 
     /**
-     * 사용자 정보 & 주문 내역 조회
+     * 회원 정보 & 주문 내역 조회
      *
      * @param id memberId
-     * @return MemberDto 사용자 정보 & 주문 내역
+     * @return MemberDto 해당 회원의 정보 + 주문 내역 목록
      */
     public MemberResponseDto getMemberByMemberId(String id) {
         Long memberId = Long.parseLong(id);

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/auth/")
+@RequestMapping("/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -32,7 +32,7 @@ public class AuthController {
             throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
         authService.logout(accessToken, refreshToken);
-        return ResponseEntity.ok("Successfully logged out");
+        return ResponseEntity.ok("로그아웃이 완료되었습니다.");
     }
 
     /* Refresh Token을 기반으로 Access Token 재발급 */

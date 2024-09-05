@@ -40,13 +40,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
         if (StringUtils.hasText(tokenValue)) {
             try {
-                if (!jwtUtil.validateToken(tokenValue)) {
+                if (!jwtUtil.validateToken(tokenValue) || jwtUtil.isTokenInBlacklist(tokenValue)) {
                     throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN);
                 }
                 Claims info = jwtUtil.getUserInfoFromToken(tokenValue);
                 setAuthentication(info.getSubject());   // token이 정상이면 SecurityContext에 저장
             } catch (CustomException e) {
-                handleError(response, HttpStatus.UNAUTHORIZED, "유효하지 않은 Access Token 입니다.");
+                handleError(response, HttpStatus.UNAUTHORIZED, "유효하지 않은 Access Token입니다.");
                 return;  // 필터 체인 중단
             } catch (Exception e) {
                 log.error(e.getMessage());

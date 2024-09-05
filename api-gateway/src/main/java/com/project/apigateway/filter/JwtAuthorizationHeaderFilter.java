@@ -7,7 +7,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -29,15 +28,18 @@ import java.util.Base64;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<JwtAuthorizationHeaderFilter.Config> {
     @Value("${jwt.secret_key}") // Base64 Encode 한 SecretKey
     private String secretKey;
-
     private Key key;
     private final RedisTemplate<String, Object> redisTemplate;
 
     public static class Config {
+    }
+
+    public JwtAuthorizationHeaderFilter(RedisTemplate<String, Object> redisTemplate) {
+        super(Config.class);
+        this.redisTemplate = redisTemplate;
     }
 
     @PostConstruct
@@ -69,6 +71,9 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     .getBody();
 
             String memberId = claims.get("memberId", String.class);
+            if (memberId == null || memberId.isEmpty()) {
+                return onError(exchange, "Token에서 회원 정보를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
+            }
 
             // 요청 헤더에 memberId 추가
             ServerHttpRequest modifiedRequest = request.mutate()
@@ -118,7 +123,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
     }
 
     /**
-     * Access Token이 블랙리스트에 있는지 확인하는 메서드
+     * Access Token이 logout 블랙리스트에 있는지 확인하기
      *
      * @param accessToken 블랙리스트에서 확인할 Access Token
      * @return 블랙리스트에 존재하면 true, 없으면 false
@@ -128,7 +133,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
         Object value = redisTemplate.opsForValue().get(accessToken);
 
         if(value != null) {
-            // 저장된 값이 "logout"인지 확인
+            // 저장된 값이 "logout"이 맞는지 확인
             return "logout".equals(value.toString());
         }
 

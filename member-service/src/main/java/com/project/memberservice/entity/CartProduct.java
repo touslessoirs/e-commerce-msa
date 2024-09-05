@@ -15,9 +15,6 @@ public class CartProduct {
     @Column(name = "id")
     private Long cartProductId;
 
-//    @Column(name = "unit_price")
-//    private int unitPrice;
-
     private int quantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,7 +25,6 @@ public class CartProduct {
     private Long productId;
 
     public CartProduct(int quantity, Cart cart, Long productId) {
-//        this.unitPrice = unitPrice;
         this.quantity = quantity;
         this.cart = cart;
         this.productId = productId;

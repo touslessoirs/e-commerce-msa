@@ -7,7 +7,7 @@ import org.springframework.data.redis.core.RedisHash;
 
 @Getter
 @AllArgsConstructor
-@RedisHash(value = "refreshToken", timeToLive = 360)  //Redis key prefix, 유효시간: 4시간 (14440)
+@RedisHash(value = "refreshToken", timeToLive = 606480)  //Redis key prefix, 유효시간: 7일
 public class RefreshToken {
     @Id
     private String refreshToken;    //Redis key (UUID)
