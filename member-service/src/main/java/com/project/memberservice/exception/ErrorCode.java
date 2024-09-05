@@ -15,9 +15,14 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER-006", "이미 사용 중인 이메일입니다."),
     ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "USER-007", "이미 인증된 사용자입니다."),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "USER-008", "잘못된 이메일 주소 형식입니다."),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "USER-009", "유효하지 않은 비밀번호입니다."),
 
     INVALID_ADMIN_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 Admin Token 입니다."),
-    INVALID_REFRESH_TOKEN(HttpStatus.NOT_FOUND, "AUTH-002", "유효하지 않은 Refresh Token 입니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-002", "유효하지 않은 Refresh Token 입니다."),
+    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-003", "유효하지 않은 Access Token 입니다."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-004", "유효하지 않은 Token 입니다."),
+    AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "AUTH-005", "인증에 실패하였습니다."),
+    INVALID_VERIFICATION_CODE(HttpStatus.UNAUTHORIZED, "AUTH-006", "유효하지 않은 인증번호입니다."),
 
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER-001", "주문을 찾을 수 없습니다."),
 

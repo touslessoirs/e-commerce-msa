@@ -1,7 +1,5 @@
 package com.project.apigateway.filter;
 
-//import com.project.apigateway.feign.TokenServiceClient;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
@@ -9,11 +7,13 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -27,22 +27,23 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Base64;
 
-@Component
 @Slf4j
+@Component
+@RequiredArgsConstructor
 public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<JwtAuthorizationHeaderFilter.Config> {
-
     @Value("${jwt.secret_key}") // Base64 Encode 한 SecretKey
     private String secretKey;
 
     private Key key;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    public static class Config {
+    }
 
     @PostConstruct
     public void init() {
         byte[] secretKeyBytes = Base64.getDecoder().decode(secretKey);
         key = Keys.hmacShaKeyFor(secretKeyBytes);
-    }
-
-    public static class Config {
     }
 
     @Override
@@ -57,8 +58,8 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
             String jwt = authorizationHeader.replace("Bearer", "");
 
-            if (!isJwtValid(jwt)) {
-                return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
+            if (!isJwtValid(jwt) || isTokenInBlacklist(jwt)) {
+                return onError(exchange, "유효하지 않은 JWT 토큰입니다.", HttpStatus.UNAUTHORIZED);
             }
 
             Claims claims = Jwts.parserBuilder()
@@ -114,6 +115,24 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
         }
 
         return returnValue;
+    }
+
+    /**
+     * Access Token이 블랙리스트에 있는지 확인하는 메서드
+     *
+     * @param accessToken 블랙리스트에서 확인할 Access Token
+     * @return 블랙리스트에 존재하면 true, 없으면 false
+     */
+    private boolean isTokenInBlacklist(String accessToken) {
+        // Redis에서 해당 accessToken에 저장된 값을 조회
+        Object value = redisTemplate.opsForValue().get(accessToken);
+
+        if(value != null) {
+            // 저장된 값이 "logout"인지 확인
+            return "logout".equals(value.toString());
+        }
+
+        return false;
     }
 
 }

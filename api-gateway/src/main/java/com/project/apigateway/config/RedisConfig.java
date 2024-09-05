@@ -1,4 +1,4 @@
-package com.project.memberservice.config;
+package com.project.apigateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

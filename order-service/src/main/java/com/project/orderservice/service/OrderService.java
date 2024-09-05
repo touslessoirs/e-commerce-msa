@@ -41,7 +41,12 @@ public class OrderService {
      * 구매 가능 시간 & 재고 확인
      *
      * @param orderRequestDto 주문 정보
-     * @return 주문하고자 하는 상품들이 모두 주문 가능한지 여부
+     * @return 주문하고자 하는 상품들이 모두 주문 가능하면 true
+     *         아래 에러 발생 가능 상황이 아닌 다른 사유로 주문 불가능하면 false
+     *
+     * Error 발생 가능 상황:
+     *  1. 구매 가능 시간이 아닐 때 (PURCHASE_TIME_INVALID)
+     *  2. 재고가 부족할 때 (STOCK_INSUFFICIENT)
      */
     @Transactional
     public boolean requestOrder(OrderRequestDto orderRequestDto) {
@@ -113,7 +118,7 @@ public class OrderService {
                         .map(OrderProductRequestDto::getProductId)
                         .collect(Collectors.toList());
                 log.info("id: {}, productIds size: {}", id, productIds.size());
-                cartServiceClient.deleteProductFromCart(id, productIds);
+                cartServiceClient.deleteProductsFromCart(id, productIds);
             }
 
             //트랜잭션 완료

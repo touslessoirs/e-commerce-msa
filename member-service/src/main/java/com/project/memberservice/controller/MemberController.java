@@ -2,6 +2,7 @@ package com.project.memberservice.controller;
 
 import com.project.memberservice.dto.MemberRequestDto;
 import com.project.memberservice.dto.MemberResponseDto;
+import com.project.memberservice.dto.PasswordChangeRequestDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.service.MemberService;
 import io.micrometer.core.annotation.Timed;
@@ -87,10 +88,20 @@ public class MemberController {
         return ResponseEntity.status(HttpStatus.OK).body(updatedMember);
     }
 
+    /* 비밀번호 변경 */
+    @PutMapping("/members/change-password")
+    public ResponseEntity<String> changePassword(@RequestHeader("X-Member-Id") String id,
+                                                 @RequestBody PasswordChangeRequestDto passwordChangeRequestDto,
+                                                 HttpServletRequest request) {
+        memberService.changePassword(id, passwordChangeRequestDto, request);
+        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
+    }
+
     /* 회원 탈퇴 */
     @PutMapping("/withdraw")
-    public ResponseEntity deleteMember(@RequestHeader("X-Member-Id") String id) {
-        memberService.withdraw(id);
+    public ResponseEntity deleteMember(@RequestHeader("X-Member-Id") String id,
+                                       HttpServletRequest request) {
+        memberService.withdraw(id, request);
         return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
     }
 }

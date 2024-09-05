@@ -9,8 +9,6 @@ import com.project.memberservice.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -47,7 +45,8 @@ public class MailSendService {
     }
 
     /**
-     * 메일 전송 정보 생성
+     * [회원 인증] 메일 전송 정보 생성
+     * 아직 인증되지 않은 회원에 대해 6자리 인증번호를 생성하고, 해당 내용을 포함하여 메일로 전송할 정보를 작성한다.
      *
      * @param id memberId
      */
@@ -61,18 +60,18 @@ public class MailSendService {
             throw new CustomException(ErrorCode.ALREADY_VERIFIED);
         }
 
-        String authNumber = String.valueOf(makeRandomNumber());  // 인증번호 생성 메서드 호출
+        String verificationCode = String.valueOf(makeRandomNumber());  // 인증번호 생성
         String from = username + "@gmail.com";
         String to = member.getEmail();
         String title = "[e-commerce] 인증번호 안내";
-        String content = "인증 번호는 <strong>" + authNumber + "</strong>입니다.";
+        String content = "인증 번호는 <strong>" + verificationCode + "</strong>입니다.";
 
         MailSendEvent mailSendEvent = new MailSendEvent(
                 from,       //발신자 메일주소
                 to,         //수신자 메일주소
                 title,      //메일 제목
                 content,    //내용
-                authNumber  //인증번호
+                verificationCode  //인증번호
         );
 
         //mailSend event send
@@ -82,7 +81,7 @@ public class MailSendService {
     /**
      * 메일 전송
      *
-     * @param mailSendEvent 메일 전송에 필요한 정보
+     * @param mailSendEvent 메일로 전송할 정보
      */
     @KafkaListener(topics = MAIL_SEND_TOPIC)
     public void mailSend(MailSendEvent mailSendEvent) {
@@ -100,35 +99,7 @@ public class MailSendService {
             e.printStackTrace();
         }
 
-        redisUtil.setDataExpire(mailSendEvent.to(), mailSendEvent.authNumber(), 60 * 5L);    //유효시간 5분
+        redisUtil.setDataExpire(mailSendEvent.to(), mailSendEvent.verificationCode(), 60 * 5L);    //유효시간 5분
     }
 
-    /**
-     * 인증번호 검증
-     * 입력한 인증번호에 해당하는 이메일(key)가 요청자와 일치하면 -> is_verified 컬럼의 값을 1(true)로 변경한다.
-     *
-     * @param id memberId
-     * @param authNumber 사용자가 입력한 인증번호
-     * @return 검증 결과
-     */
-    public ResponseEntity checkAuthNumber(String id, String authNumber) {
-        Long memberId = Long.parseLong(id);
-        Member member = memberRepository.findByMemberId(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        String email = member.getEmail();
-        String storedAuthNum = redisUtil.getData(email);   //해당 email에 발급된 인증번호
-
-        if (storedAuthNum == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 인증번호입니다.");
-        } else if (storedAuthNum.equals(authNumber)) {  //인증번호 일치
-            member.setIsVerified(1);  //true
-            memberRepository.save(member);
-
-            return ResponseEntity.ok("인증이 완료되었습니다. memberId: " + member.getMemberId());
-
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 인증번호입니다.");
-        }
-    }
 }

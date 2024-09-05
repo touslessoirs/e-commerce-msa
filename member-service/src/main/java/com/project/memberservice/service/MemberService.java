@@ -1,21 +1,24 @@
 package com.project.memberservice.service;
 
-import com.project.memberservice.feign.OrderServiceClient;
 import com.project.memberservice.dto.MemberRequestDto;
 import com.project.memberservice.dto.MemberResponseDto;
 import com.project.memberservice.dto.OrderResponseDto;
+import com.project.memberservice.dto.PasswordChangeRequestDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.entity.UserRoleEnum;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
 import com.project.memberservice.exception.FeignErrorDecoder;
+import com.project.memberservice.feign.OrderServiceClient;
 import com.project.memberservice.repository.MemberRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MemberService {
 
+    private final AuthService authService;
     @Value("${admin.token}")
     private String ADMIN_TOKEN;
 
@@ -146,14 +150,49 @@ public class MemberService {
     }
 
     /**
+     * 비밀번호 변경
+     * 변경 완료 시 로그아웃한다.
+     *
+     * @param id memberId
+     * @param passwordChangeRequestDto 기존 비밀번호, 변경하려는 비밀번호
+     */
+    public void changePassword(String id, PasswordChangeRequestDto passwordChangeRequestDto, HttpServletRequest request) {
+        Long memberId = Long.parseLong(id);
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 현재 비밀번호 확인
+        if (!passwordEncoder.matches(passwordChangeRequestDto.getCurrentPassword(), member.getPassword())) {
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        // 새 비밀번호 암호화
+        String encodedNewPassword = passwordEncoder.encode(passwordChangeRequestDto.getNewPassword());
+        member.setPassword(encodedNewPassword);
+
+        // 새 비밀번호 저장
+        memberRepository.save(member);
+        
+        // 로그아웃
+        String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String refreshToken = request.getHeader("Refresh-Token");
+
+        if (accessToken == null || refreshToken == null) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
+        }
+        authService.logout(accessToken, refreshToken);
+    }
+
+    /**
      * 회원 탈퇴
      * isDeleted -> 1(true)로 수정
-     * 해당 회원의 장바구니, 장바구니에 담긴 상품 정보 삭제
+     * 1. 해당 회원의 장바구니, 장바구니에 담긴 상품 정보 삭제
+     * 2. 탈퇴 완료 시 로그아웃한다.
      *
      * @param id memberId
      */
     @Transactional
-    public void withdraw(String id) {
+    public void withdraw(String id, HttpServletRequest request) {
         Long memberId = Long.parseLong(id);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -161,7 +200,17 @@ public class MemberService {
         member.setIsDeleted(1);
         memberRepository.save(member);
 
-        // 장바구니 삭제
+        // 장바구니(담겨있던 상품 정보 포함) 삭제
         cartService.deleteCart(member);
+
+        // 로그아웃
+        String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String refreshToken = request.getHeader("Refresh-Token");
+
+        if (accessToken == null || refreshToken == null) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
+        }
+        authService.logout(accessToken, refreshToken);
     }
+
 }

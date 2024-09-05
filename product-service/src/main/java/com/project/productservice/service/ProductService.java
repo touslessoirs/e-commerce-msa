@@ -81,7 +81,7 @@ public class ProductService {
      *
      * @param productId 확인 상품
      * @param quantity 확인 수량
-     * @return 주문 가능 여부
+     * @return 주문 가능 하면 true, 주문 불가능하면 false
      */
     @Transactional
     public boolean checkProductForOrder(Long productId, int quantity) {
@@ -98,7 +98,7 @@ public class ProductService {
      * 구매 가능 시간 확인
      *
      * @param productId 확인 상품
-     * @return 현재 구매 가능 시점인지 여부
+     * @return 현재 구매 가능 시점이면 true, 그렇지 않으면 false
      */
     public boolean checkPurchaseTime(Long productId) {
         String purchaseStartTimeKey = PURCHASE_KEY_PREFIX + productId;
@@ -128,7 +128,7 @@ public class ProductService {
      *
      * @param productId 확인 상품
      * @param quantity 확인 수량
-     * @return 해당 상품의 재고 수량이 충분한지 여부
+     * @return 해당 상품의 재고 수량이 충분하면 true, 그렇지 않으면 false
      */
     public boolean checkStock(Long productId, int quantity) {
         // 1. 캐시 조회

@@ -5,6 +5,6 @@ public record MailSendEvent(
         String to,         //수신자 메일주소
         String title,      //메일 제목
         String content,    //내용
-        String authNumber  //인증번호
+        String verificationCode  //인증번호
 ) {
 }

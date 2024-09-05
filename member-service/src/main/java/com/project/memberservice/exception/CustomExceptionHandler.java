@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import javax.security.sasl.AuthenticationException;
+
 @Slf4j
 @ControllerAdvice
 public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
@@ -38,6 +40,12 @@ public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponseEntity> handleIllegalArgumentException(IllegalArgumentException e) {
         ErrorCode errorCode = ErrorCode.USER_EXCEPTION;
+        return ErrorResponseEntity.toResponseEntity(errorCode);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponseEntity> handleAuthenticationException(AuthenticationException e) {
+        ErrorCode errorCode = ErrorCode.AUTHENTICATION_FAILED;
         return ErrorResponseEntity.toResponseEntity(errorCode);
     }
 

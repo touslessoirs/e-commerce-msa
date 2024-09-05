@@ -38,7 +38,14 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(secretKeyBytes);
     }
 
-    /* Access Token 생성 */
+    /**
+     * Access Token 생성
+     *
+     * @param username 해당 회원의 email(ID)
+     * @param role 해당 회원의 UserRoleEnum 값
+     * @param memberId
+     * @return 생성한 Access Token
+     */
     public String createToken(String username, UserRoleEnum role, String memberId) {
         Date now = new Date();
 
@@ -52,7 +59,12 @@ public class JwtUtil {
                 .compact();
     }
 
-    /* header 에서 JWT token 가져오기 */
+    /**
+     * header 에서 Access Token 가져오기
+     *
+     * @param request
+     * @return request header에 포함된 Access Token
+     */
     public String getJwtFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
@@ -61,7 +73,12 @@ public class JwtUtil {
         return null;
     }
 
-    /* Access Token 검증 */
+    /**
+     * Access Token 검증
+     *
+     * @param token Access Token
+     * @return 해당 토큰이 유효하면 true, 유효하지 않으면 false
+     */
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
@@ -78,7 +95,12 @@ public class JwtUtil {
         return false;
     }
 
-    /* 토큰에서 사용자 정보 가져오기 */
+    /**
+     * Access Token의 정보 가져오기
+     *
+     * @param token Access Token
+     * @return 해당 토큰에 포함된 정보(Claims)
+     */
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     }

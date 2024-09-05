@@ -50,7 +50,6 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                             creds.getPassword(),
                             null)
             );
-
         } catch (IOException e) {
             log.error(e.getMessage());
             throw new RuntimeException(e.getMessage());
@@ -60,6 +59,8 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     @Override
     protected void successfulAuthentication(HttpServletRequest req, HttpServletResponse res, FilterChain chain,
                                             Authentication auth) throws IOException, ServletException {
+        log.info("Authentication Success");
+
         String username = ((UserDetailsImpl) auth.getPrincipal()).getUsername();
         UserRoleEnum role = ((UserDetailsImpl) auth.getPrincipal()).getMember().getRole();
         String memberId = String.valueOf(((UserDetailsImpl) auth.getPrincipal()).getMemberId());
@@ -70,8 +71,6 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         //Refresh Token 발급 및 redis 저장
         String refreshToken = UUID.randomUUID().toString(); //Refresh Token
         RefreshToken redis = new RefreshToken(refreshToken, ((UserDetailsImpl) auth.getPrincipal()).getMemberId());
-        log.info("refreshToken: {}", refreshToken);
-        log.info("refreshToken from redis: {}", redis.getRefreshToken());
         refreshTokenRepository.save(redis);
 
         //응답 메시지 설정
@@ -82,7 +81,22 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         res.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
         res.addHeader(REFRESH_TOKEN_HEADER, refreshToken);
 
-        res.getWriter().write("{\"message\": \"Login successful\"}");
+        res.getWriter().write("{\"message\": \"로그인에 성공하였습니다.\"}");
+    }
+
+
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request,
+                                              HttpServletResponse response,
+                                              AuthenticationException failed) throws IOException, ServletException {
+        log.error("Authentication failed: " + failed.getMessage());
+
+        // 응답 상태와 메시지 설정
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+
+        // 실패 응답 메시지
+        response.getWriter().write("{\"message\": \"로그인에 실패하였습니다. 아이디 또는 비밀번호를 확인해 주세요.\"}");
     }
 
 }
