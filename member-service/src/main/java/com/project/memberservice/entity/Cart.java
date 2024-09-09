@@ -8,7 +8,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "cart")
+@Table(name = "carts")
 public class Cart extends Timestamped {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

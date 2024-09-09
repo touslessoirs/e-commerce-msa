@@ -257,7 +257,7 @@ public class OrderService {
     /**
      * 주문 취소
      *
-     * 결제가 완료된 상태인(PAYMENT_COMPLETED) 주문만 취소할 수 있으며, 승인 절차 없이 즉시 취소 처리함
+     * 결제 대기중(PAYMENT_PENDING), 결제 완료(PAYMENT_COMPLETED) 주문만 취소할 수 있으며, 승인 절차 없이 즉시 취소 처리함
      * 주문 취소 후 해당 주문에 대한 재고는 롤백한다.
      *
      * @param id 취소를 요청한 회원의 ID
@@ -269,7 +269,7 @@ public class OrderService {
         Order order = orderRepository.findByOrderIdAndMemberId(orderId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
-        if (order.getStatus() != OrderStatusEnum.PAYMENT_COMPLETED) {
+        if (order.getStatus() != OrderStatusEnum.PAYMENT_COMPLETED && order.getStatus() != OrderStatusEnum.PAYMENT_PENDING) {
             throw new CustomException(ErrorCode.CANCELLATION_NOT_ALLOWED);
         }
 

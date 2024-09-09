@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -39,22 +41,26 @@ public class Member extends Timestamped {
     @Column(name = "is_verified")
     private Integer isVerified;
 
-    @Column(name = "is_deleted")
-    private Integer isDeleted;
+    @Column(nullable = false)
+    @Enumerated(value = EnumType.STRING)
+    private UserStatusEnum status = UserStatusEnum.ACTIVE;
 
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private UserRoleEnum role;
 
-    public Member(String email, String password, String name, String phone, String address, String addressDetail, UserRoleEnum role) {
+    @Column(name = "last_login_time")
+    private LocalDateTime lastLoginTime;
+
+    public Member(String email, String password, String name, String phone, String address, String addressDetail, Integer isVerified, UserStatusEnum status, UserRoleEnum role) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.phone = phone;
         this.address = address;
         this.addressDetail = addressDetail;
-        isVerified = 0;
-        isDeleted = 0;
+        this.isVerified = isVerified;
+        this.status = status;
         this.role = role;
     }
 }

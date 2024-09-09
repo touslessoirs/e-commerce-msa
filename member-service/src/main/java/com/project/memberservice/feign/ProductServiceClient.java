@@ -15,11 +15,11 @@ import java.util.List;
 public interface ProductServiceClient {
 
     /* 상품 상세 조회 */
-    @GetMapping("/{productId}")
+    @GetMapping("/products/{productId}")
     public ResponseEntity<ProductResponseDto> getProductDetail(@PathVariable Long productId);
 
     /* 여러 상품의 상세 조회 */
-    @PostMapping("/details")
+    @PostMapping("/products/details")
     public ResponseEntity<List<ProductResponseDto>> getProductsDetails(@RequestBody ProductIdsRequestDto productIds);
 
 }

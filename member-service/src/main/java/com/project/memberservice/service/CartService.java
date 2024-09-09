@@ -68,14 +68,13 @@ public class CartService {
                     return cartRepository.save(newCart); // 장바구니 정보가 없는 경우 새로 생성
                 });
 
-        List<CartProductRequestDto> cartProducts = cartRequestDto.getCartProducts();
-        for (CartProductRequestDto cartProductRequestDto : cartProducts) {
+        for (CartProductRequestDto cartProductRequestDto : cartRequestDto.getCartProducts()) {
             Long productId = cartProductRequestDto.getProductId();
             int quantityToAdd = cartProductRequestDto.getQuantity(); // 추가할 수량
 
             // 2. 장바구니에 해당 상품 있는지 조회
             CartProduct cartProduct = cartProductRepository.findByProductIdAndCart(cartProductRequestDto.getProductId(), cart)
-                    .orElse(null);  // 추가/증가 분기 처리를 위해 예외 던지지 않음
+                    .orElse(null);  // 예외 던지지 않음
 
             // 3. 해당 상품의 재고 조회
             ProductResponseDto productResponseDto =

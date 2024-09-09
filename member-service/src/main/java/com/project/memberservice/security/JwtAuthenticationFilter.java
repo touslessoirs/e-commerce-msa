@@ -2,8 +2,10 @@ package com.project.memberservice.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.memberservice.dto.LoginRequestDto;
+import com.project.memberservice.entity.Member;
 import com.project.memberservice.entity.RefreshToken;
 import com.project.memberservice.entity.UserRoleEnum;
+import com.project.memberservice.repository.MemberRepository;
 import com.project.memberservice.repository.RefreshTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Slf4j
@@ -28,11 +31,12 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final MemberRepository memberRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, RefreshTokenRepository refreshTokenRepository) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, RefreshTokenRepository refreshTokenRepository, MemberRepository memberRepository) {
         this.jwtUtil = jwtUtil;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.memberRepository = memberRepository;
         setFilterProcessesUrl("/login");
     }
 
@@ -61,17 +65,22 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                                             Authentication auth) throws IOException, ServletException {
         log.info("Authentication Success");
 
-        String username = ((UserDetailsImpl) auth.getPrincipal()).getUsername();
-        UserRoleEnum role = ((UserDetailsImpl) auth.getPrincipal()).getMember().getRole();
-        String memberId = String.valueOf(((UserDetailsImpl) auth.getPrincipal()).getMemberId());
+        UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
+        Member member = userDetails.getMember();
+        String username = userDetails.getUsername();
+        UserRoleEnum role = member.getRole();
 
         //Access Token 발급
-        String token = jwtUtil.createToken(username, role, memberId);   //Access Token
+        String token = jwtUtil.createToken(username, role, String.valueOf(member.getMemberId()));   //Access Token
 
         //Refresh Token 발급 및 redis 저장
         String refreshToken = UUID.randomUUID().toString(); //Refresh Token
-        RefreshToken redis = new RefreshToken(refreshToken, ((UserDetailsImpl) auth.getPrincipal()).getMemberId());
+        RefreshToken redis = new RefreshToken(refreshToken, member.getMemberId());
         refreshTokenRepository.save(redis);
+
+        //마지막 로그인 시간 저장
+        member.setLastLoginTime(LocalDateTime.now());
+        memberRepository.save(member);
 
         //응답 메시지 설정
         res.setStatus(HttpServletResponse.SC_OK);

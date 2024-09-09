@@ -6,6 +6,7 @@ import com.project.memberservice.dto.OrderResponseDto;
 import com.project.memberservice.dto.PasswordChangeRequestDto;
 import com.project.memberservice.entity.Member;
 import com.project.memberservice.entity.UserRoleEnum;
+import com.project.memberservice.entity.UserStatusEnum;
 import com.project.memberservice.exception.CustomException;
 import com.project.memberservice.exception.ErrorCode;
 import com.project.memberservice.exception.FeignErrorDecoder;
@@ -72,6 +73,8 @@ public class MemberService {
                     memberRequestDto.getPhone(),
                     memberRequestDto.getAddress(),
                     memberRequestDto.getAddressDetail(),
+                    0,  //이메일 인증 미완료
+                    UserStatusEnum.ACTIVE,
                     role
             );
 
@@ -156,6 +159,7 @@ public class MemberService {
      * @param id memberId
      * @param passwordChangeRequestDto 기존 비밀번호, 변경하려는 비밀번호
      */
+    @Transactional
     public void changePassword(String id, PasswordChangeRequestDto passwordChangeRequestDto, HttpServletRequest request) {
         Long memberId = Long.parseLong(id);
         Member member = memberRepository.findById(memberId)
@@ -185,9 +189,9 @@ public class MemberService {
 
     /**
      * 회원 탈퇴
-     * isDeleted -> 1(true)로 수정
-     * 1. 해당 회원의 장바구니, 장바구니에 담긴 상품 정보 삭제
-     * 2. 탈퇴 완료 시 로그아웃한다.
+     * 1. status DELETED로 수정
+     * 2. 해당 회원의 장바구니, 장바구니에 담긴 상품 정보 삭제
+     * 3. 탈퇴 완료 시 로그아웃한다.
      *
      * @param id memberId
      */
@@ -197,7 +201,7 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        member.setIsDeleted(1);
+        member.setStatus(UserStatusEnum.DELETED);
         memberRepository.save(member);
 
         // 장바구니(담겨있던 상품 정보 포함) 삭제

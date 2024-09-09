@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT-001", "상품을 찾을 수 없습니다."),
     PURCHASE_TIME_INVALID(HttpStatus.FORBIDDEN, "PRODUCT-002", "현재 구매가 불가능한 상품이 포함되어 있습니다."),
-    STOCK_INSUFFICIENT(HttpStatus.BAD_REQUEST, "PRODUCT-003", "재고가 부족하여 결제할 수 없는 상품이 포함되어 있습니다."),
+    STOCK_INSUFFICIENT(HttpStatus.BAD_REQUEST, "PRODUCT-003", "재고가 부족합니다."),
 
     GENERAL_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "SERVER-001", "서버 오류가 발생했습니다."),
     DATA_ACCESS_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "SERVER-002", "데이터베이스 오류가 발생했습니다."),

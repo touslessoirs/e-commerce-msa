@@ -137,7 +137,7 @@ public class AuthService {
             member.setIsVerified(1);  //인증 완료
             memberRepository.save(member);
 
-            return ResponseEntity.ok("인증이 완료되었습니다");
+            return ResponseEntity.ok("인증이 완료되었습니다.");
 
         } else {
             throw new CustomException(ErrorCode.INVALID_VERIFICATION_CODE);

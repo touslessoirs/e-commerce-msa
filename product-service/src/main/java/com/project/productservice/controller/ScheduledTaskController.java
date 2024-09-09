@@ -1,6 +1,6 @@
-package com.project.orderservice.controller;
+package com.project.productservice.controller;
 
-import com.project.orderservice.service.ScheduledTaskManager;
+import com.project.productservice.service.ScheduledTaskManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +19,12 @@ public class ScheduledTaskController {
 
     private final ScheduledTaskManager scheduledTaskManager;
 
-    /* 주문 상태 업데이트 */
-    @PostMapping("/orderStatus")
-    public ResponseEntity updateOrderStatus() {
-        log.info("주문 상태 업데이트 작업 수동 실행");
-        scheduledTaskManager.updateOrderStatus();
-        return ResponseEntity.ok("주문 상태 업데이트 완료");
+    /* Redis-DB 재고 및 구매 가능 시간 동기화 */
+    @PostMapping("/synchronize-stock")
+    public ResponseEntity synchronizeDbAndRedis() {
+        log.info("Redis-DB 동기화 작업 수동 실행");
+        scheduledTaskManager.synchronizeDbAndRedis();
+        return ResponseEntity.ok("Redis-DB 동기화 작업이 완료되었습니다.");
     }
 
 }
