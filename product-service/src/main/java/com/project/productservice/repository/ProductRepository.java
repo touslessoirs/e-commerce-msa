@@ -2,6 +2,8 @@ package com.project.productservice.repository;
 
 import com.project.productservice.entity.Product;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +24,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :productId")
     Optional<Product> findByIdWithLock(@Param("productId") Long productId);
+
+    /**
+     * 전체 상품 조회 + 페이징 처리
+     * 
+     * @param pageable
+     * @return
+     */
+    Page<Product> findAll(Pageable pageable);
+
 }

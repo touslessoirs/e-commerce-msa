@@ -6,7 +6,6 @@ import com.project.orderservice.entity.OrderStatusEnum;
 import com.project.orderservice.exception.CustomException;
 import com.project.orderservice.exception.ErrorCode;
 import com.project.orderservice.service.OrderService;
-import com.project.orderservice.service.ScheduledTaskManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -34,7 +33,6 @@ public class OrderController {
     private String port;
 
     private final OrderService orderService;
-    private final ScheduledTaskManager scheduledTaskManager;
 
     @GetMapping("/health-check")
     public String status() {
