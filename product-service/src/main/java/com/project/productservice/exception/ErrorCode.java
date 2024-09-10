@@ -14,9 +14,9 @@ public enum ErrorCode {
     GENERAL_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "SERVER-001", "서버 오류가 발생했습니다."),
     DATA_ACCESS_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "SERVER-002", "데이터베이스 오류가 발생했습니다."),
 
-    CONCURRENCY_FAILURE(HttpStatus.INTERNAL_SERVER_ERROR, "Error", "재시도 횟수를 초과했습니다."),
+    FORBIDDEN_ADMIN_ACCESS(HttpStatus.FORBIDDEN, "AUTH-007", "관리자 권한이 없습니다."),
 
-    COULD_NOT_ACQUIRE_LOCK(HttpStatus.CONFLICT, "P_LOCK_001", "Could not acquire lock. Please try again later.");
+    COULD_NOT_ACQUIRE_LOCK(HttpStatus.CONFLICT, "P_LOCK_001", "락을 획득할 수 없습니다. 잠시 후 다시 시도해주세요.");
 
     private final HttpStatus httpStatus;
     private final String code;

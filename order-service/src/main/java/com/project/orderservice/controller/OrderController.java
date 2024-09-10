@@ -32,12 +32,10 @@ public class OrderController {
     @Value("${server.port}")
     private String port;
 
-    private final OrderService orderService;
+    public static final String AUTHORIZATION_KEY = "auth";
+    public static final String ROLE_ADMIN = "ADMIN";
 
-    @GetMapping("/health-check")
-    public String status() {
-        return String.format("ORDER SERVICE Running on PORT %s", port);
-    }
+    private final OrderService orderService;
 
     @GetMapping("/welcome")
     public String welcome(HttpServletRequest request, HttpServletResponse response) {
@@ -70,7 +68,7 @@ public class OrderController {
                     }
                 }
             } else {
-                //주문 불가능 -> 클라이언트 응답 반환
+                //주문 불가능 -> 클라이언트 응답 반환 후 종료
                 log.info("주문 불가능");
                 throw new CustomException(ErrorCode.ORDER_REQUEST_DENIED);
             }
@@ -113,9 +111,12 @@ public class OrderController {
         return ResponseEntity.ok("반품 신청이 완료되었습니다.");
     }
 
-    /* 반품 신청 승인 */
+    /* 반품 신청 승인 (관리자) */
     @PostMapping("/approve-return/{orderId}")
-    public ResponseEntity<String> approveReturnRequest(@PathVariable Long orderId) {
+    public ResponseEntity<String> approveReturnRequest(@RequestHeader(AUTHORIZATION_KEY) String role, @PathVariable Long orderId) {
+        if(!role.equals(ROLE_ADMIN)) {
+            throw new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
         orderService.approveReturnRequest(orderId);
         return ResponseEntity.ok("반품 신청이 승인되었습니다.");
     }

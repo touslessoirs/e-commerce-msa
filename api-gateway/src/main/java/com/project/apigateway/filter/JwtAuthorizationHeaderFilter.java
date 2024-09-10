@@ -31,6 +31,7 @@ import java.util.Base64;
 public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<JwtAuthorizationHeaderFilter.Config> {
     @Value("${jwt.secret_key}") // Base64 Encode 한 SecretKey
     private String secretKey;
+    public static final String AUTHORIZATION_KEY = "auth";
     private Key key;
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -71,6 +72,8 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     .getBody();
 
             String memberId = claims.get("memberId", String.class);
+            String role = claims.get(AUTHORIZATION_KEY, String.class);
+            log.info(">>>>>>>>>>>> role: {}", role);
             if (memberId == null || memberId.isEmpty()) {
                 return onError(exchange, "Token에서 회원 정보를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
             }
@@ -78,6 +81,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             // 요청 헤더에 memberId 추가
             ServerHttpRequest modifiedRequest = request.mutate()
                     .header("X-Member-Id", memberId)
+                    .header(AUTHORIZATION_KEY, role)
                     .build();
 
             return chain.filter(exchange.mutate().request(modifiedRequest).build());

@@ -23,6 +23,7 @@ public enum ErrorCode {
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-004", "유효하지 않은 Token 입니다."),
     AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "AUTH-005", "인증에 실패하였습니다."),
     INVALID_VERIFICATION_CODE(HttpStatus.UNAUTHORIZED, "AUTH-006", "유효하지 않은 인증번호입니다."),
+    FORBIDDEN_ADMIN_ACCESS(HttpStatus.FORBIDDEN, "AUTH-007", "관리자 권한이 없습니다."),
 
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORDER-001", "주문을 찾을 수 없습니다."),
 

@@ -282,7 +282,7 @@ public class OrderService {
                 .map(OrderProductRequestDto::new)
                 .collect(Collectors.toList());
 
-        // 재고 rollback
+        // 재고 롤백
         rollbackStock(orderProductRequestDtoList);
 
         log.info("주문 취소 완료 - orderId: {}", orderId);
@@ -315,7 +315,7 @@ public class OrderService {
 
     /**
      * 반품 신청 승인
-     * 
+     *
      * 반품 신청 상태(RETURN_REQUESTED)인 주문에 대해 반품을 승인 처리한다.
      * 주문 상태를 '반품 완료(RETURN_COMPLETED)'으로 변경한다.
      * 반품 승인 후 해당 주문에 대한 재고는 롤백한다.
@@ -340,10 +340,9 @@ public class OrderService {
                 .map(OrderProductRequestDto::new)
                 .collect(Collectors.toList());
 
-        // 재고 rollback
+        // 재고 롤백
         rollbackStock(orderProductRequestDtoList);
 
         log.info("반품 신청 승인 완료 - orderId: {}", orderId);
     }
-
 }

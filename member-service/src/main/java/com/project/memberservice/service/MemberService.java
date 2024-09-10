@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,7 +47,7 @@ public class MemberService {
     private final FeignErrorDecoder feignErrorDecoder;
 
     /**
-     * 회원가입
+     * 회원 가입
      *
      * @param memberRequestDto 회원 가입에 필요한 정보
      * @return MemberResponseDto 회원 정보
@@ -125,8 +127,9 @@ public class MemberService {
      *
      * @return Member 전체 사용자 목록
      */
-    public Iterable<Member> getAllMembers() {
-        return memberRepository.findAll();
+    public Page<MemberResponseDto> getAllMembers(Pageable pageable) {
+        Page<Member> members = memberRepository.findAll(pageable);
+        return members.map(MemberResponseDto::new);
     }
 
     /**

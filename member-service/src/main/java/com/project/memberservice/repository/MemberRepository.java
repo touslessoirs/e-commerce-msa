@@ -16,11 +16,20 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByMemberId(Long memberId);
 
     /**
-     * 특정 상태의 회원 중에서 주어진 날짜보다 이전에 로그인한 회원 목록을 조회한다.
+     * [페이징 처리] 특정 상태의 회원 중에서 주어진 날짜보다 이전에 로그인한 회원 목록을 조회한다.
      *
      * @param status 조회할 회원의 status
      * @param cutoffDate 기준 시점(이 날짜 이전에 로그인한 경우)
+     * @param pageable
      * @return 해당 조건에 맞는 회원 목록
      */
     Page<Member> findAllByStatusAndLastLoginTimeBefore(UserStatusEnum status, LocalDateTime cutoffDate, Pageable pageable);
+
+    /**
+     * [페이징 처리] 전체 회원 목록 조회
+     *
+     * @param pageable
+     * @return 전체 회원 목록
+     */
+    Page<Member> findAll(Pageable pageable);
 }

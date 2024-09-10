@@ -18,8 +18,8 @@ public class ErrorfulController {
     /* 특정 확률로 HTTP 500 상태 코드를 반환 */
     @GetMapping("/case1")
     public ResponseEntity<String> case1() {
-//        if (new Random().nextInt(100) < 5) {  //5%
-        if (new Random().nextInt(10) < 5) { //50%
+        if (new Random().nextInt(100) < 5) {  //5%
+//        if (new Random().nextInt(10) < 5) { //50%
             return ResponseEntity.status(500).body("Internal Server Error");
         }
 

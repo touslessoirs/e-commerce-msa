@@ -1,6 +1,7 @@
 package com.project.productservice.service;
 
 import com.project.productservice.dto.ProductIdsRequestDto;
+import com.project.productservice.dto.ProductRequestDto;
 import com.project.productservice.dto.ProductResponseDto;
 import com.project.productservice.entity.Product;
 import com.project.productservice.exception.CustomException;
@@ -8,13 +9,13 @@ import com.project.productservice.exception.ErrorCode;
 import com.project.productservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @EnableAsync
 @Slf4j
@@ -23,26 +24,50 @@ import java.util.stream.StreamSupport;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final RedisTemplate<String, String> redisTemplate;
-
-    private static final String STOCK_KEY_PREFIX = "stock_ID: ";
-    private static final String PURCHASE_KEY_PREFIX = "purchase_start_time_ID: ";
 
     /**
-     * 전체 상품 조회
-     *
-     * @return 전체 상품의 상세 정보 목록
+     * 상품 등록
+     * 
+     * @param productRequestDto 등록하려는 상품 정보
+     * @return 등록한 상품 정보
      */
-    public List<ProductResponseDto> getAllProducts() {
-        Iterable<Product> products = productRepository.findAll();
+    public ProductResponseDto createProduct(ProductRequestDto productRequestDto) {
+        Product product = new Product();
+        product.setName(productRequestDto.getName());
+        product.setUnitPrice(productRequestDto.getUnitPrice());
+        product.setStock(productRequestDto.getStock());
+        product.setCategory(productRequestDto.getCategory());
 
-        //Iterable to List
-        List<Product> productList = StreamSupport.stream(products.spliterator(), false)
-                .collect(Collectors.toList());
+        productRepository.save(product);
+        return new ProductResponseDto(product);
+    }
 
-        return productList.stream()
-                .map(product -> new ProductResponseDto(product))
-                .collect(Collectors.toList());
+    /**
+     * 상품 수정
+     * 
+     * @param productId 수정하려는 상품의 ID
+     * @param productRequestDto 수정하려는 상품 정보
+     * @return 수정된 상품 정보
+     */
+    public ProductResponseDto updateProduct(Long productId, ProductRequestDto productRequestDto) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+        product.setName(productRequestDto.getName());
+        product.setUnitPrice(productRequestDto.getUnitPrice());
+        product.setStock(productRequestDto.getStock());
+        product.setCategory(productRequestDto.getCategory());
+
+        productRepository.save(product);
+        return new ProductResponseDto(product);
+    }
+
+    /**
+     * 상품 삭제
+     *
+     * @param productId 삭제하려는 상품의 ID
+     */
+    public void deleteProduct(Long productId) {
+        productRepository.deleteById(productId);
     }
 
     /**
@@ -61,7 +86,7 @@ public class ProductService {
 
     /**
      * 여러 상품의 상세 조회
-     * 
+     *
      * @param productIdsRequestDto 상세 조회를 요청한 상품 ID 목록
      * @return 해당 상품 목록의 상세 정보
      */
@@ -71,6 +96,16 @@ public class ProductService {
         return products.stream()
                 .map(ProductResponseDto::new)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 전체 상품 조회
+     *
+     * @return 전체 상품의 상세 정보 목록
+     */
+    public Page<ProductResponseDto> getAllProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findAll(pageable);
+        return products.map(product -> new ProductResponseDto(product));
     }
 
     /**
@@ -85,4 +120,8 @@ public class ProductService {
         return product.getStock();
     }
 
+    public Page<ProductResponseDto> getProductsByCategory(String category, Pageable pageable) {
+        Page<Product> products = productRepository.findByCategory(category, pageable);
+        return products.map(product -> new ProductResponseDto(product));
+    }
 }

@@ -52,7 +52,7 @@ public class JwtUtil {
         Date now = new Date();
         return Jwts.builder()
                 .setSubject(username) // 사용자 식별자값(email)
-                .claim(AUTHORIZATION_KEY, role)
+                .claim(AUTHORIZATION_KEY, String.valueOf(role))
                 .claim("memberId", memberId)
                 .setExpiration(new Date(now.getTime() + accessExpirationTime))
                 .setIssuedAt(now)

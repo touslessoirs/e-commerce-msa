@@ -33,4 +33,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      */
     Page<Product> findAll(Pageable pageable);
 
+    /**
+     * 카테고리별 상품 조회 + 페이징 처리
+     * 
+     * @param category 해당 카테고리에 속하는 상품을 필터링
+     * @param pageable
+     * @return 해당 카테고리에 해당하는 상품 목록
+     */
+    Page<Product> findByCategory(String category, Pageable pageable);
 }
